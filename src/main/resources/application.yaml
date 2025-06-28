@@ -1,0 +1,15 @@
+spring.application.name: "externalRestDemo"
+
+
+jwt:
+  secret: ${JWT_SECRET}
+
+spring:
+  r2dbc:
+    url: ${datasource-url}
+    username: ${datasource-username}
+    password: ${datasource-password}
+
+logging:
+  level:
+    org.springframework.r2dbc.core: debug
