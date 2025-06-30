@@ -60,3 +60,36 @@
 - 제일 큰 차이점 
   - Flux는 0개 이상의 데이터를 발행할수있는데
   - Mono는 0~1개만 발행가능
+
+### Schedulers
+- 리액티브 프로그래밍에서 스레드 관리를 위한 컴포넌트
+- parallel : ExecutorService를 사용해서 물리적인 스레드를 가진 스레드 풀로 멀티스레드로 작업을 처리
+  - 논 블로킹 IO에 적합
+- single : 단일 스레드 하나로 작업을 처리
+- newSingle : 새로운 스레드 하나를 생성해서 작업을 처리
+- immediat : 현재 스레드에서 작업을 처리
+- boundedElastic : ExecutorService 기반의 스레드 풀을 사용해서 작업을 처리
+  - 기본적으로 CPU 코어 수 * 10개를 생성한다고 함
+  - 블로킹 I/O 작업에 적합
+- fromExecutorService : 기존에 사용 중이던 ExecutorService가 있으면 그걸 사용해서 작업을 처리
+
+#### Just, Defer, fromCallable
+- Just : 구독 시 주어진 값을 즉시 발ㅇ
+  - 인스턴스화 시점에 값을 생성
+- Defer : Mono Supplier를 사용해서 구독 시 해당 supplier를 구독해서 값을 생성
+  - 구독될 때 해당 서플라이어를 구독해서 캡쳐
+- fromCallable : Callable을 사용해서 구독 시 해당 Callable을 실행해서 값을 생성
+  - Defer와 비슷하지만, Callable을 사용해서 값을 생성
+
+#### Error Handler?
+- 에러 발생 시 이벤트를 발생시키고 onErrorResume을 사용해서 후처리 스트림을 실행하는게 제일 좋을 듯
+
+##### Reactor Error Handler
+- onErrorResume : 에러 발생 시 대체 플럭스를 실행 (아래로 전파 안됨)
+- error : 스트림에 에러를 발생시킬 때
+- doOnError : 에러 발생 시 주어진 로직 수행 (아래로 전파되는것으로 보임)
+- onErrorMap : 에러 발생 시 주어진 다른 에러를 던짐
+- onErrorReturn : 에러 발생 시 주어진 값을 반환하고 스트림을 정상 종료
+- onErrorComplete : 에러 발생 시 주어진 predicate가 true라면 complete, 아니라면 error 전파
+- onErrorContinue : 에러 발생 시 주어진 predicate를 실행하고 계속해서 EMIT
+- onErrorStop : 에러 발생 시 스트림을 중단하고 에러를 전파 (스트림을 즉시 중단)

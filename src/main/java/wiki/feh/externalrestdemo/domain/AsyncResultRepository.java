@@ -8,5 +8,4 @@ import reactor.core.publisher.Mono;
 public interface AsyncResultRepository extends ReactiveCrudRepository<AsyncResult, Integer> {
     Mono<AsyncResult> findById(int id);
     Mono<AsyncResult> findByIdAndFinishedAtIsNotNull(int id);
-
 }

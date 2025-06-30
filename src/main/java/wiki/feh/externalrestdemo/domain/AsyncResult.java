@@ -58,4 +58,8 @@ public class AsyncResult {
             this.finishedAt = LocalDateTime.now(); // 상태가 완료되거나 실패로 변경될 때 finishedAt을 현재 시간으로 설정
         }
     }
+
+    public void updateBody(String newBody) {
+        this.body = newBody;
+    }
 }

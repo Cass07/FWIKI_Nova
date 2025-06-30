@@ -3,6 +3,7 @@ package wiki.feh.externalrestdemo.service.asyncresult;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import wiki.feh.externalrestdemo.domain.AsyncResult;
+import wiki.feh.externalrestdemo.domain.AsyncStatus;
 
 import java.time.LocalDateTime;
 
@@ -24,6 +25,6 @@ public class AsyncResultService {
     public Mono<AsyncResult> findResultById(int id) {
 
         //return stub data
-        return Mono.just(new AsyncResult(id, "body", LocalDateTime.now(), LocalDateTime.now()));
+        return Mono.just(new AsyncResult(id, "body", LocalDateTime.now(), LocalDateTime.now(), AsyncStatus.COMPLETED));
     }
 }
