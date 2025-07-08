@@ -35,7 +35,10 @@ public class AsyncApiService {
                 processDataAsync(saveTask, requestBody)
                     .subscribeOn(Schedulers.boundedElastic())
                     // 결과를 받아서 업데이트하고
-                    .flatMap(this::saveAsyncResult)
+                    .flatMap(processedResult -> {
+                        processedResult.updateStatus(AsyncStatus.COMPLETED);
+                        return saveAsyncResult(processedResult);
+                    })
                     .doOnError(error -> {
                         // 작업 실패 시 에러를 저장
                         Mono.just(saveTask)
@@ -52,6 +55,13 @@ public class AsyncApiService {
                 // 작업 저장에 성공했으면 비동기적으로 작업을 시작하므로 조회를 위한 객체를 반환
                 return Mono.just(asyncResult);
             });
+    }
+
+    @Transactional
+    public Mono<AsyncResult> getAsyncApiResult(int id) {
+        // 주어진 ID로 비동기 작업의 결과를 조회
+        return asyncResultRepository.findById(id)
+            .switchIfEmpty(Mono.error(new RuntimeException("No AsyncResult found for id: " + id)));
     }
 
     // asyncResult를 저장
@@ -86,6 +96,4 @@ public class AsyncApiService {
                     return savedAsyncResult;
                 });
     }
-
-
 }

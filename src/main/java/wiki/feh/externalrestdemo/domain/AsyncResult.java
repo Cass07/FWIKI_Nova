@@ -1,6 +1,7 @@
 package wiki.feh.externalrestdemo.domain;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
@@ -61,5 +62,16 @@ public class AsyncResult {
 
     public void updateBody(String newBody) {
         this.body = newBody;
+    }
+
+    @Override
+    public String toString() {
+        return "AsyncResult{" +
+                "id=" + id +
+                ", body='" + body + '\'' +
+                ", createdAt=" + createdAt +
+                ", finishedAt=" + finishedAt +
+                ", stat=" + stat +
+                '}';
     }
 }
