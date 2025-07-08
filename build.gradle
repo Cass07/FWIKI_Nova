@@ -42,8 +42,14 @@ dependencies {
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation 'io.projectreactor:reactor-test'
+//    implementation 'org.testcontainers:junit-jupiter'
+//    implementation 'org.testcontainers:r2dbc'
 
     testRuntimeOnly 'com.h2database:h2'
     testRuntimeOnly 'io.r2dbc:r2dbc-h2'
+}
+
+test {
+    useJUnitPlatform()
 }
