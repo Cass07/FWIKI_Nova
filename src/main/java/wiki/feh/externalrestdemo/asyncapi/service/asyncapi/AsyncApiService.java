@@ -1,4 +1,4 @@
-package wiki.feh.externalrestdemo.service.asyncapi;
+package wiki.feh.externalrestdemo.asyncapi.service.asyncapi;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -6,11 +6,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-import wiki.feh.externalrestdemo.domain.AsyncResult;
-import wiki.feh.externalrestdemo.domain.AsyncResultRepository;
-import wiki.feh.externalrestdemo.domain.AsyncStatus;
-import wiki.feh.externalrestdemo.dto.OpenAPIRequestBody;
-import wiki.feh.externalrestdemo.dto.ProcessDto;
+import wiki.feh.externalrestdemo.asyncapi.domain.AsyncResult;
+import wiki.feh.externalrestdemo.asyncapi.domain.AsyncResultRepository;
+import wiki.feh.externalrestdemo.asyncapi.domain.AsyncStatus;
+import wiki.feh.externalrestdemo.asyncapi.dto.OpenAPIRequestBody;
+import wiki.feh.externalrestdemo.asyncapi.service.asyncapi.work.IProcess;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -19,9 +19,8 @@ public class AsyncApiService {
 
     private final AsyncResultRepository asyncResultRepository;
 
-    //todo:: process Method를 매개변수로 받을 수 있도록 변경
     @Transactional
-    public Mono<AsyncResult> startAsyncApi(OpenAPIRequestBody requestBody) {
+    public Mono<AsyncResult> startAsyncApi(OpenAPIRequestBody requestBody, IProcess work) {
 
         AsyncResult asyncResult = new AsyncResult(requestBody.getResponseBody());
 
@@ -32,13 +31,10 @@ public class AsyncApiService {
                 int receivedId = saveTask.getId();
                 log.info("Async task started with id: {}", receivedId);
                 // 실제 프로세스는 Schedulers.boundedElastic를 쓴다
-                processDataAsync(saveTask, requestBody)
+                processDataAsync(saveTask, requestBody, work)
                     .subscribeOn(Schedulers.boundedElastic())
                     // 결과를 받아서 업데이트하고
-                    .flatMap(processedResult -> {
-                        processedResult.updateStatus(AsyncStatus.COMPLETED);
-                        return saveAsyncResult(processedResult);
-                    })
+                    .flatMap(this::saveAsyncResult)
                     .doOnError(error -> {
                         // 작업 실패 시 에러를 저장
                         Mono.just(saveTask)
@@ -74,7 +70,8 @@ public class AsyncApiService {
             });
     }
 
-    private Mono<AsyncResult> processDataAsync(AsyncResult asyncResult, OpenAPIRequestBody data) {
+    // 비동기 작업의 시작과 끝을 기록하는 역할
+    private Mono<AsyncResult> processDataAsync(AsyncResult asyncResult, OpenAPIRequestBody data, IProcess work) {
         // 작업 상태를 PROCESSING으로 업데이트
         return Mono.just(asyncResult)
                 .map(asyncResult1 -> {
@@ -82,16 +79,21 @@ public class AsyncApiService {
                     return asyncResult1;
                 })
                 .flatMap(this::saveAsyncResult)
-                // 시간 오래 걸리는 작업 수행
+                // 작업 수행
                 .map(savedAsyncResult -> {
                     log.info("Starting processing for id: {}", savedAsyncResult.getId());
+
+                    // 실제 작업을 객체한테 옮겨주기
                     try {
-                        Thread.sleep(5000);
-                    } catch (InterruptedException e) {
-                        // mono error로 처리?
-                        throw new RuntimeException(e);
+                        savedAsyncResult = work.run(savedAsyncResult, data);
+                    } catch (Exception e) {
+                        // 작업 중 예외 발생 시 작업 실패 처리
+                        log.error("Error during processing: {}", e.getMessage());
+                        savedAsyncResult.updateStatus(AsyncStatus.FAILED);
+                        savedAsyncResult.updateBody("Error occurred: " + e.getMessage());
+                        return savedAsyncResult;
                     }
-                    savedAsyncResult.updateBody(data.getResponseBody());
+
                     log.info("Processing completed for id: {}", savedAsyncResult.getId());
                     return savedAsyncResult;
                 });

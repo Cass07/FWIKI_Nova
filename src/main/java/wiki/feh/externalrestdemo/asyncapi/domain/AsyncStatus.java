@@ -1,4 +1,4 @@
-package wiki.feh.externalrestdemo.domain;
+package wiki.feh.externalrestdemo.asyncapi.domain;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

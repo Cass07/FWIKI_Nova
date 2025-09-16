@@ -1,13 +1,14 @@
-package wiki.feh.externalrestdemo.facade;
+package wiki.feh.externalrestdemo.asyncapi.facade;
 
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
-import wiki.feh.externalrestdemo.dto.AsyncApiResponseBody;
-import wiki.feh.externalrestdemo.dto.AsyncApiResponseGetBody;
-import wiki.feh.externalrestdemo.dto.OpenAPIRequestBody;
-import wiki.feh.externalrestdemo.service.asyncapi.AsyncApiService;
+import wiki.feh.externalrestdemo.asyncapi.dto.AsyncApiResponseBody;
+import wiki.feh.externalrestdemo.asyncapi.dto.AsyncApiResponseGetBody;
+import wiki.feh.externalrestdemo.asyncapi.dto.OpenAPIRequestBody;
+import wiki.feh.externalrestdemo.asyncapi.service.asyncapi.AsyncApiService;
+import wiki.feh.externalrestdemo.asyncapi.service.asyncapi.work.SleepProcess;
 
 @RequiredArgsConstructor
 @Component
@@ -19,7 +20,7 @@ public class AsyncApiFacade {
         String endpoint = "/api/async";
 
         // 비동기 호출 결과를 responseBody에 매핑
-        return asyncApiService.startAsyncApi(requestBody)
+        return asyncApiService.startAsyncApi(requestBody, new SleepProcess())
                 .map(asyncResult -> new AsyncApiResponseBody(asyncResult, endpoint));
     }
 

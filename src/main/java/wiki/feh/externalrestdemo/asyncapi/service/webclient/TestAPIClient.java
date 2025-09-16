@@ -1,4 +1,4 @@
-package wiki.feh.externalrestdemo.service.webclient;
+package wiki.feh.externalrestdemo.asyncapi.service.webclient;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -37,6 +37,7 @@ public class TestAPIClient extends OpenAPIClientImpl {
         );
     }
 
+    // JWT 토큰을 생성해서 Authorization 헤더로 쓸 Map에 Bearer Token으로 추가해준다
     private Map<String, String> addJsonTokenToHeaders(Map<String, String> headers) {
         if (headers == null) {
             headers = new HashMap<>();

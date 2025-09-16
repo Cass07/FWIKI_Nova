@@ -7,3 +7,4 @@ CREATE TABLE "async_result" (
     `finished_at` DATETIME,
     `stat` VARCHAR(20) DEFAULT 'PENDING'
 )
+

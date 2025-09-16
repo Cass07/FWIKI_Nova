@@ -1,4 +1,4 @@
-package wiki.feh.externalrestdemo.domain;
+package wiki.feh.externalrestdemo.acyncapi.domain;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -7,6 +7,9 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.data.r2dbc.DataR2dbcTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import wiki.feh.externalrestdemo.asyncapi.domain.AsyncResult;
+import wiki.feh.externalrestdemo.asyncapi.domain.AsyncResultRepository;
+import wiki.feh.externalrestdemo.asyncapi.domain.AsyncStatus;
 import wiki.feh.externalrestdemo.util.config.R2dbcConfig;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;

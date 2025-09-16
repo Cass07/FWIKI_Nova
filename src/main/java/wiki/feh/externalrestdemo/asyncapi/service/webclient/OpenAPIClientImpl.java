@@ -1,4 +1,4 @@
-package wiki.feh.externalrestdemo.service.webclient;
+package wiki.feh.externalrestdemo.asyncapi.service.webclient;
 
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -22,15 +22,6 @@ public class OpenAPIClientImpl {
     private final WebClient.Builder webClientBuilder;
     private final String BASE_URL;
 
-    /**
-     *
-     * @param requestUrl request url
-     * @param headers header 미디어 타입
-     * @param requestBody request body
-     * @param responseType response Type class
-     * @return
-     * @param <T>
-     */
     public <T> Mono<ResponseEntity<T>> post(String requestUrl, Map<String, String> headers, Object requestBody, Class<T> responseType) {
         return webClientBuilder.build()
                 .method(HttpMethod.POST)

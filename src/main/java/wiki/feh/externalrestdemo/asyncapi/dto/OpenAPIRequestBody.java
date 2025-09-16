@@ -1,4 +1,4 @@
-package wiki.feh.externalrestdemo.dto;
+package wiki.feh.externalrestdemo.asyncapi.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

@@ -1,8 +1,8 @@
-package wiki.feh.externalrestdemo.dto;
+package wiki.feh.externalrestdemo.asyncapi.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import wiki.feh.externalrestdemo.domain.AsyncStatus;
+import wiki.feh.externalrestdemo.asyncapi.domain.AsyncStatus;
 
 
 @AllArgsConstructor

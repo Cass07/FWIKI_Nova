@@ -1,14 +1,14 @@
-package wiki.feh.externalrestdemo.controller;
+package wiki.feh.externalrestdemo.asyncapi.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
-import wiki.feh.externalrestdemo.dto.AsyncApiResponseBody;
-import wiki.feh.externalrestdemo.dto.AsyncApiResponseGetBody;
-import wiki.feh.externalrestdemo.dto.OpenAPIRequestBody;
-import wiki.feh.externalrestdemo.facade.AsyncApiFacade;
+import wiki.feh.externalrestdemo.asyncapi.dto.AsyncApiResponseBody;
+import wiki.feh.externalrestdemo.asyncapi.dto.AsyncApiResponseGetBody;
+import wiki.feh.externalrestdemo.asyncapi.dto.OpenAPIRequestBody;
+import wiki.feh.externalrestdemo.asyncapi.facade.AsyncApiFacade;
 
 @Slf4j
 @RequiredArgsConstructor
