@@ -51,3 +51,13 @@ CREATE TABLE `batch_quote_result` (
                                     `body` TEXT,
                                     `created_at` DATETIME NOT NULL
 );
+
+CREATE TABLE `hero_list` (
+    `id` VARCHAR(35) PRIMARY KEY NOT NULL,
+    `name` VARCHAR(35) NOT NULL,
+    `jpnamesub` VARCHAR(15) NOT NULL,
+    `jpname` VARCHAR(10) NOT NULL,
+    `korname` VARCHAR(10) NOT NULL,
+    `kornamesub` VARCHAR(20) NOT NULL,
+    `releasedate` DATETIME NOT NULL
+)

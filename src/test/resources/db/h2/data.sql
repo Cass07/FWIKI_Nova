@@ -18,3 +18,8 @@ INSERT INTO `hero_quotes_list_kr` (`idx`, `id`, `kind`, `seq`, `text`, `editor`,
 VALUES
     (1, 'hero_test', 'JOIN', 1, '테스트 조인', 1, 1, 1),
     (2, 'hero_test', 'JOIN', 1, '테스트 조인 version 2', 1, 2, 1);
+
+INSERT INTO `hero_list` (`id`, `name`, `jpnamesub`, `jpname`, `korname`, `kornamesub`, `releasedate`)
+VALUES
+    ('hero_001', 'Hero: One', 'ヒーロー1 sub', 'ヒーロー1', '히어로1', '히어로1 sub', '2024-01-01'),
+    ('hero_002', 'Hero: Two', 'ヒーロー2 sub', 'ヒーロー2', '히어로2', '히어로2 sub', '2024-02-01');
