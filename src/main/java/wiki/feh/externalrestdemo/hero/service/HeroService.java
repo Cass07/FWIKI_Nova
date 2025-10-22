@@ -14,7 +14,7 @@ public class HeroService {
     private final HeroRepository heroRepository;
 
     // hero id list로 hero list 조회
-    Flux<Hero> getHeroesByIds(List<String> ids) {
+    public Flux<Hero> getHeroesByIds(List<String> ids) {
         return heroRepository.findAllByIdIn(ids);
     }
 }

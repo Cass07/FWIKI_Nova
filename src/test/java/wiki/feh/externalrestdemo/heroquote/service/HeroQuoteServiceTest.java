@@ -11,9 +11,7 @@ import reactor.core.publisher.Flux;
 import wiki.feh.externalrestdemo.heroquote.domain.HeroQuote;
 import wiki.feh.externalrestdemo.heroquote.domain.HeroQuoteRepository;
 import wiki.feh.externalrestdemo.heroquote.domain.QuoteLang;
-import wiki.feh.externalrestdemo.heroquote.dto.HeroQuoteDto;
 
-import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -40,16 +38,16 @@ class HeroQuoteServiceTest {
         QuoteLang lang = QuoteLang.JP;
 
         doReturn(Flux.just(heroQuote1, heroQuote2, heroQuote3))
-                .when(heroQuoteRepository).findByIdInAndLangOrderById(ids, lang);
+                .when(heroQuoteRepository).findAllByIdInAndLangOrderById(ids, lang);
 
         // when
-        var result = heroQuoteService.findQuotesByIds(ids).collectList().block();
+        var result = heroQuoteService.getQuotesAndIdByIds(ids).collectList().block();
 
         // then
         assertNotNull(result);
         assertEquals(2, result.size());
-        assertEquals(2, result.getFirst().size()); // "test" id에 해당하는 데이터 2개
-        assertEquals(1, result.get(1).size()); // "test2" id에 해당하는 데이터 1개
+        assertEquals(2, result.getFirst().getT2().size()); // "test" id에 해당하는 데이터 2개
+        assertEquals(1, result.get(1).getT2().size()); // "test2" id에 해당하는 데이터 1개
     }
 
 }

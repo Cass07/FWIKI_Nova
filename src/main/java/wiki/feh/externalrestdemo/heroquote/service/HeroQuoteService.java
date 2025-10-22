@@ -3,6 +3,8 @@ package wiki.feh.externalrestdemo.heroquote.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
+import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
 import wiki.feh.externalrestdemo.heroquote.domain.HeroQuote;
 import wiki.feh.externalrestdemo.heroquote.domain.HeroQuoteRepository;
 import wiki.feh.externalrestdemo.heroquote.domain.QuoteLang;
@@ -20,27 +22,15 @@ public class HeroQuoteService {
 
     /**
      * id 리스트에 해당하는 HeroQuote들을 모두 찾아서 id별로 묶어서 json 변환을 위한 list로 반환
-     * @param ids 조회할 id 리스트
-     * @return Flux<List < HeroQuote>> id별로 묶인 HeroQuote 리스트 flux
      */
-    public Flux<List<HeroQuote>> findQuotesByIds(List<String> ids) {
-        return heroQuoteRepository.findByIdInAndLangOrderById(ids, DEFAULT_LANG)
+    public Flux<Tuple2<String, List<HeroQuote>>> getQuotesAndIdByIds(List<String> ids) {
+        return heroQuoteRepository.findAllByIdInAndLangOrderById(ids, DEFAULT_LANG)
                 .collectList()
-                .flatMapMany(quotes -> {
-                    // id별로 묶기
-                    return Flux.fromIterable(ids.stream()
-                            .map(id -> quotes.stream()
-                                    .filter(quote -> quote.getId().equals(id))
-                                    .toList())
-                            .toList());
-                });
+                // id별로 묶기
+                .flatMapMany(quotes -> Flux.fromIterable(ids.stream()
+                        .map(id -> Tuples.of(id, quotes.stream()
+                                .filter(quote -> quote.getId().equals(id))
+                                .toList()))
+                        .toList()));
     }
-
-
-    /**
-     * heroQuoteKr에 데이터가 없는 제일 최신의 idx n개를 조회
-     */
-
-
-
 }
