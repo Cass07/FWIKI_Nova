@@ -16,8 +16,9 @@ public class HeroQuoteKrService {
     // 특정 id, kind, seq에 해당하는 HeroQuoteKr의 최신 버전을 조회
     public Mono<Integer> findLatestVersionByIdKindSeq(String id, String kind, int seq) {
         return heroQuoteKrRepository.findFirstByIdAndKindAndSeqOrderByVersionDesc(id, kind, seq)
-                .defaultIfEmpty(HeroQuoteKr.builder().version(0).build())
-                .map(HeroQuoteKr::getVersion);
+                .map(HeroQuoteKr::getVersion)
+                .defaultIfEmpty(0)
+                .onErrorReturn(0);
     }
 
     // HeroQuoteKr 리스트를 배치 저장

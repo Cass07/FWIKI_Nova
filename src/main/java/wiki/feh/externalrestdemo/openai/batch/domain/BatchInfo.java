@@ -1,6 +1,7 @@
 package wiki.feh.externalrestdemo.openai.batch.domain;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Column;
@@ -8,6 +9,7 @@ import org.springframework.data.relational.core.mapping.Table;
 
 import java.time.LocalDateTime;
 
+@Builder
 @Getter
 @AllArgsConstructor
 @Table(name = "`batch_info`")

@@ -37,6 +37,30 @@ public class BatchFacade {
 
     private final OpenAPIService openAPIService;
 
+    public Mono<BatchInfo> asyncTest() {
+        BatchInfo batchInfo = new BatchInfo().updateStatus(BatchStatus.PENDING);
+        Mono<BatchInfo> savedBatchInfo = batchInfoService.saveBatchInfo(batchInfo);
+
+        asyncTestInner(savedBatchInfo)
+                .doOnNext(item -> log.info("Processed item: {}", item))
+                .subscribeOn(Schedulers.parallel())
+                .subscribe();
+
+        return savedBatchInfo;
+    }
+
+    // 내부에서 구독하는 flux를 별도의 메소드로 구현해서 test 클래스에서 접근 가능하게 함
+    public Flux<String> asyncTestInner(Mono<BatchInfo> savedBatchInfo) {
+        return savedBatchInfo
+                .flatMapMany(savedInfo -> {
+                    int batchInfoId = savedInfo.getIdx();
+                    return Flux.range(1, 3)
+                            // time interval 1 sec
+                            .delayElements(java.time.Duration.ofSeconds(1))
+                            .map(i -> "hero-" + batchInfoId + "-" + i);
+                });
+    }
+
     /**
      * facade로 묶은 batch 요청 프로세스
      * 1. BatchInfo 객체를 생성
@@ -47,63 +71,56 @@ public class BatchFacade {
      * 6. dto list로부터 json 문자열을 생성하고, 이 데이터를 사용해서 API 요청
      * 7. API 응답을 받아서 batchInfo에 배치 고유 id와, 상태를 진행중으로 업데이트
      */
+
+    // Controller에서 호출할 메인 메소드
     public Mono<BatchInfo> requestBatchJob(List<String> heroIds) {
         BatchInfo batchInfo = new BatchInfo().updateStatus(BatchStatus.PENDING);
-        // BatchInfo 객체를 저장하자마자 바로 리턴하고, 이후 후처리 작업 플렉스는 saveBatchInfo가 구독된 이후 실행
-        return batchInfoService.saveBatchInfo(batchInfo)
-                // 후처리 플럭스 작업
-                .doOnSubscribe(_ -> {
-                    int batchInfoId = batchInfo.getIdx();
-                    // hero, quote list, batchQuoteInfo 튜플 플럭스 생성
-                    log.debug("Preparing hero quote batch info for batch id: {}", batchInfoId);
-                    prepareHeroQuoteBatchInfo(heroIds, batchInfoId)
-                            .subscribeOn(Schedulers.boundedElastic())
-                            .map(TupleUtils.function((hero, quotes, batchQuoteInfo) -> {
-                                // quote list와 hero 객체로부터 dto 객체 생성해서 list로 묶어서 넘기고
-                                return Tuples.of(
-                                        hero,
-                                        HeroQuoteDto.OpenAiBatchRequest.of(hero, quotes),
-                                        batchQuoteInfo
-                                );
-                            }))
-                            // quote 리스트를 json string list로 묶고 batchQuoteInfo 객체들도 묶어서 tuple2<list, list>로 리턴
-                            .collect(() -> Tuples.<List<String>, List<BatchQuoteInfo>>of(new ArrayList<>(), new ArrayList<>()),
-                                    (acc, tuple) -> {
-                                        acc.getT1().add(HeroQuoteDto.OpenAIBatchText.of(tuple.getT2()).getText());
-                                        acc.getT2().add(tuple.getT3());
-                                    })
-                            // batchQuoteInfo 리스트를 batch insert
-                            .flatMap(TupleUtils.function((batchRequestLineList, batchQuoteInfoList) ->
-                                    batchQuoteInfoService.saveAllBatchQuoteInfoList(batchQuoteInfoList)
-                                            .thenReturn(batchRequestLineList)
-                            ))
-                            // json string 리스트로 외부 api 요청
-                            .flatMap(openAPIService::callRequestBatchApi)
-                            // 응답을 받아서 batchInfo 업데이트
-                            .flatMap(batchId -> updateBatchInfoRunning(batchInfo, batchId))
-                            .switchIfEmpty(Mono.error(() -> new IllegalStateException("Batch processing failed")))
-                            // 에러 처리
-                            .doOnError(error -> {
-                                log.error("Error during batch processing for batch id {}: {}", batchInfoId, error.getMessage());
-                                updateBatchInfoFailed(batchInfo)
-                                        .subscribeOn(Schedulers.boundedElastic())
-                                        .subscribe();
-                            })
-                            .subscribe();
+        // BatchInfo 저장하는 mono는 생성하고 바로 리턴시킨
+        Mono<BatchInfo> savedBatchInfo = batchInfoService.saveBatchInfo(batchInfo);
+
+        // 후속 작업은 flatMap으로 연결해서 비동기 처리
+        savedBatchInfo
+            .flatMap(savedInfo -> heroQuoteBatchJob(heroIds, savedInfo))
+            .subscribeOn(Schedulers.boundedElastic())
+            .subscribe();
+
+        return savedBatchInfo;
+    }
+
+    // hero quote batch job 처리 메소드
+    public Mono<BatchInfo> heroQuoteBatchJob(List<String> heroIds, BatchInfo savedInfo) {
+        int batchInfoId = savedInfo.getIdx();
+        log.debug("Preparing hero quote batch info for batch id: {}", batchInfoId);
+
+        return prepareHeroQuoteBatchInfo(heroIds, batchInfoId)
+                .map(TupleUtils.function((hero, quotes, batchQuoteInfo) -> {
+                    // quote list와 hero 객체로부터 dto 객체 생성해서 list로 묶어서 넘기고
+                    return Tuples.of(
+                            hero,
+                            HeroQuoteDto.OpenAiBatchRequest.of(hero, quotes),
+                            batchQuoteInfo
+                    );
+                }))
+                // quote 리스트를 json string list로 묶고 batchQuoteInfo 객체들도 묶어서 tuple2<list, list>로 리턴
+                .collect(() -> Tuples.<List<String>, List<BatchQuoteInfo>>of(new ArrayList<>(), new ArrayList<>()),
+                        (acc, tuple) -> {
+                            acc.getT1().add(HeroQuoteDto.OpenAIBatchText.of(tuple.getT2()).getText());
+                            acc.getT2().add(tuple.getT3());
+                        })
+                // batchQuoteInfo 리스트를 batch insert
+                .flatMap(TupleUtils.function((batchRequestLineList, batchQuoteInfoList) ->
+                        batchQuoteInfoService.saveAllBatchQuoteInfoList(batchQuoteInfoList)
+                                .thenReturn(batchRequestLineList)
+                ))
+                // json string 리스트로 외부 api 요청
+                .flatMap(openAPIService::callRequestBatchApi)
+                // 응답을 받아서 batchInfo 업데이트
+                .flatMap(batchId -> batchInfoService.updateBatchInfoRunning(savedInfo, batchId))
+                .onErrorResume(error -> {
+                    log.error("Error during batch processing for batch id {}: {}", batchInfoId, error.getMessage());
+                    return batchInfoService.updateBatchInfoFailed(savedInfo);
                 });
 
-    }
-
-    private Mono<BatchInfo> updateBatchInfoFailed(BatchInfo batchInfo) {
-        batchInfo.updateStatus(BatchStatus.FAILED);
-        return batchInfoService.saveBatchInfo(batchInfo);
-    }
-
-    // BatchInfo의 batchId를 갱신하고 상태를 RUNNING으로 업데이트
-    private Mono<BatchInfo> updateBatchInfoRunning(BatchInfo batchInfo, String batchId) {
-        batchInfo.updateBatchId(batchId);
-        batchInfo.updateStatus(BatchStatus.RUNNING);
-        return batchInfoService.saveBatchInfo(batchInfo);
     }
 
     /**
