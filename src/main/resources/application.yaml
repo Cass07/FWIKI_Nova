@@ -9,6 +9,10 @@ spring:
     url: ${datasource-url}
     username: ${datasource-username}
     password: ${datasource-password}
+    pool:
+      initial-size: 10
+      max-size: 24
+      max-idle-time: 30000ms
 
 logging:
   level:

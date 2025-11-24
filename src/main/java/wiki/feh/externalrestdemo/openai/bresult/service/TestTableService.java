@@ -3,7 +3,7 @@ package wiki.feh.externalrestdemo.openai.bresult.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.reactive.TransactionalOperator;
 import reactor.core.publisher.Mono;
 import wiki.feh.externalrestdemo.openai.bresult.domain.TestTableRepository;
 import wiki.feh.externalrestdemo.util.NamedLockManager;
@@ -14,9 +14,9 @@ import wiki.feh.externalrestdemo.util.NamedLockManager;
 public class TestTableService {
     private final TestTableRepository testTableRepository;
     private final NamedLockManager namedLockManager;
+    private final TransactionalOperator transactionalOperator;
 
 
-    @Transactional
     public Mono<Void> decreaseValue2ById(int id) {
         String lockName = "test_table_" + id;
 
@@ -26,8 +26,9 @@ public class TestTableService {
                             testTable.decreaseValue2();
                             return testTableRepository.save(testTable);
                         })
+                        // 내부 체인에만 transaction이 걸리도록 함
+                        .as(transactionalOperator::transactional)
                         .then()
         );
     }
-
 }

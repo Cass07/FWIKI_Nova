@@ -15,7 +15,6 @@ public class TestTableController {
     @GetMapping("/test/conn")
     public Mono<Void> testConnection() {
         return testTableService.decreaseValue2ById(1);
-
     }
 
 }
