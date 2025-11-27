@@ -60,4 +60,10 @@ CREATE TABLE `hero_list` (
     `korname` VARCHAR(10) NOT NULL,
     `kornamesub` VARCHAR(20) NOT NULL,
     `releasedate` DATETIME NOT NULL
-)
+);
+
+CREATE TABLE `test_table` (
+    `id` INT(10) PRIMARY KEY NOT NULL AUTO_INCREMENT,
+    `value_1` VARCHAR(50),
+    `value_2` INT(10)
+);

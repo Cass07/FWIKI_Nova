@@ -7,6 +7,7 @@ import lombok.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.r2dbc.config.AbstractR2dbcConfiguration;
 import org.springframework.data.r2dbc.repository.config.EnableR2dbcRepositories;
 import wiki.feh.externalrestdemo.heroquote.domain.QuoteLangConverter;
@@ -27,6 +28,7 @@ public class R2dbcConfig extends AbstractR2dbcConfiguration {
     @Value("${spring.r2dbc.password}" )
     private String password;
 
+    @Primary
     @Bean
     @Override
     public @NonNull ConnectionFactory connectionFactory() {

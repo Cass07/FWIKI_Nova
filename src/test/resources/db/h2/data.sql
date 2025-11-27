@@ -23,3 +23,7 @@ INSERT INTO `hero_list` (`id`, `name`, `jpnamesub`, `jpname`, `korname`, `kornam
 VALUES
     ('hero_001', 'Hero: One', 'ヒーロー1 sub', 'ヒーロー1', '히어로1', '히어로1 sub', '2024-01-01'),
     ('hero_002', 'Hero: Two', 'ヒーロー2 sub', 'ヒーロー2', '히어로2', '히어로2 sub', '2024-02-01');
+
+INSERT INTO `test_table` (`id`, `value_1`, `value_2`)
+VALUES
+    (1, 'Value 1A', 0);

@@ -7,8 +7,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
-import wiki.feh.externalrestdemo.heroquote.dto.HeroQuoteDto;
-import wiki.feh.externalrestdemo.openai.batch.dto.BatchDto;
+import wiki.feh.externalrestdemo.openai.bresult.dto.BResultDto;
 
 /**
  * 대사 번역을 저장하는 엔티티
@@ -48,7 +47,7 @@ public class HeroQuoteKr {
     @Column("is_visible")
     private int status;
 
-    public HeroQuoteKr(BatchDto.BatchResponse response, String heroId, int version, int status) {
+    public HeroQuoteKr(BResultDto.ApiResult response, String heroId, int version, int status) {
         this.id = heroId;
         this.kind = response.getKey();
         this.seq = response.getSeq();
@@ -58,4 +57,6 @@ public class HeroQuoteKr {
         this.version = version;
         this.status = status;
     }
+
+
 }
