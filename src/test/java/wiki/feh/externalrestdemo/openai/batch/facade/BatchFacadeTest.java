@@ -4,6 +4,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -53,6 +54,12 @@ class BatchFacadeTest {
 
     @Mock
     private OpenAPIService openAPIService;
+
+    @Captor
+    private ArgumentCaptor<List<BatchQuoteInfo>> batchQuoteInfoListCaptor;
+
+    @Captor
+    private ArgumentCaptor<List<String>> stringListCaptor;
 
     @DisplayName("asyncTest 테스트")
     @Test
@@ -156,14 +163,12 @@ class BatchFacadeTest {
 
         BatchInfo batchInfo = new BatchInfo(1, null, BatchStatus.PENDING, now, null);
 
-        ArgumentCaptor<List<BatchQuoteInfo>> captor = ArgumentCaptor.forClass(List.class);
-
         doReturn(Flux.fromIterable(heroList))
                 .when(heroService).getHeroesByIds(heroIds);
 
         doReturn(Flux.just(
-                Tuples.of(heroQuote1_1, heroQuote1_2),
-                Tuples.of(heroQuote2_1, heroQuote2_2)
+                Tuples.of(hero1, List.of(heroQuote1_1, heroQuote1_2)),
+                Tuples.of(hero2, List.of(heroQuote2_1, heroQuote2_2))
         )).when(heroQuoteService).getQuotesAndIdByIds(heroIds);
 
         doReturn(Mono.empty())
@@ -186,12 +191,26 @@ class BatchFacadeTest {
 
         // then - batchQuoteInfo list 저장 검증
 
-        verify(batchQuoteInfoService).saveAllBatchQuoteInfoList(captor.capture());
-        List<BatchQuoteInfo> captured = captor.getValue();
+        verify(batchQuoteInfoService).saveAllBatchQuoteInfoList(batchQuoteInfoListCaptor.capture());
+        List<BatchQuoteInfo> captured = batchQuoteInfoListCaptor.getValue();
         assertNotNull(captured);
         assertEquals(2, captured.size()); // heroIds 수와 같아야 함
         assertTrue(captured.stream().anyMatch(bqi -> bqi.getHeroId().equals(hero1)));
         assertTrue(captured.stream().anyMatch(bqi -> bqi.getHeroId().equals(hero2)));
+
+        // callRequestBatchApi에 전달된 리스트 검증
+        verify(openAPIService).callRequestBatchApi(stringListCaptor.capture());
+        List<String> capturedApiRequestList = stringListCaptor.getValue();
+        assertNotNull(capturedApiRequestList);
+        assertEquals(2, capturedApiRequestList.size());
+
+        String firstItem = capturedApiRequestList.getFirst();
+        assertTrue(firstItem.contains(heroQuote1_1.getText()));
+        assertTrue(firstItem.contains(heroQuote1_2.getText()));
+
+        String secondItem = capturedApiRequestList.getLast();
+        assertTrue(secondItem.contains(heroQuote2_1.getText()));
+        assertTrue(secondItem.contains(heroQuote2_2.getText()));
     }
 
 

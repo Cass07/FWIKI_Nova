@@ -33,7 +33,7 @@ public class NamedLockManager {
         );
     }
 
-    public Mono<Void> acquireLock(String lockName, Connection connection) {
+    private Mono<Void> acquireLock(String lockName, Connection connection) {
         // connection을 받아서 직접 쿼리 execute
         return Mono.from(connection.createStatement("SELECT GET_LOCK(?, 10) AS lock_status")
                 .bind(0, lockName)
@@ -54,7 +54,7 @@ public class NamedLockManager {
     }
 
     // 락을 획득하는 메소드, 획득에 실패하면 runtime exception 발생
-    public Mono<Void> acquireLock(String lockName) {
+    private Mono<Void> acquireLock(String lockName) {
         return databaseClient.sql("SELECT GET_LOCK(?, 10) AS lock_status")
                 .bind(0, lockName)
                 .map(row -> row.get("lock_status", Integer.class))
@@ -69,7 +69,7 @@ public class NamedLockManager {
                 });
     }
 
-    public Mono<Void> releaseLock(String lockName, Connection connection) {
+    private Mono<Void> releaseLock(String lockName, Connection connection) {
         // connection을 받아서 직접 쿼리 execute
         return Mono.from(connection.createStatement("SELECT RELEASE_LOCK(?) AS release_status")
                 .bind(0, lockName)
@@ -89,7 +89,7 @@ public class NamedLockManager {
     }
 
     // 락을 릴리즈하는 메소드, 실패하면 Runtime Exception 발생
-    public Mono<Void> releaseLock(String lockName) {
+    private Mono<Void> releaseLock(String lockName) {
         return databaseClient.sql("SELECT RELEASE_LOCK(?) AS release_status")
                 .bind(0, lockName)
                 .map(row -> row.get("release_status", Integer.class))
