@@ -13,6 +13,9 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import wiki.feh.externalrestdemo.heroquote.domain.HeroQuoteKr;
 import wiki.feh.externalrestdemo.heroquote.service.HeroQuoteKrService;
+import wiki.feh.externalrestdemo.openai.batch.domain.BatchQuoteInfo;
+import wiki.feh.externalrestdemo.openai.batch.domain.BatchStatus;
+import wiki.feh.externalrestdemo.openai.batch.service.BatchQuoteInfoService;
 import wiki.feh.externalrestdemo.openai.bresult.dto.BResultDto;
 import wiki.feh.externalrestdemo.util.NamedLockManager;
 
@@ -35,8 +38,14 @@ class BResultFacadeTest {
     @Mock
     private NamedLockManager namedLockManager;
 
+    @Mock
+    private BatchQuoteInfoService batchQuoteInfoService;
+
     @Captor
     private ArgumentCaptor<List<HeroQuoteKr>> heroQuoteKrListCaptor;
+
+    @Captor
+    private ArgumentCaptor<BatchQuoteInfo> batchQuoteInfoCaptor;
 
     @DisplayName("insertHeroQuoteKr 테스트")
     @Test
@@ -44,8 +53,9 @@ class BResultFacadeTest {
         // given
         String heroId = "hero_123";
         int currentIndex = 5;
-        String HERO_QUOTE_KR_KIND = "Home";
-        int HERO_QUOTE_KR_SEQ = 1;
+        BatchQuoteInfo batchQuoteInfo = new BatchQuoteInfo(1, 1, BatchStatus.PENDING, null, heroId);
+        BatchQuoteInfo batchQuoteInfoCompleted = new BatchQuoteInfo(1, 1, BatchStatus.COMPLETED, null, heroId);
+
 
         List<BResultDto.ApiResult> apiResults = List.of(
                 new BResultDto.ApiResult("Home", 1, "home test1"),
@@ -56,7 +66,7 @@ class BResultFacadeTest {
 
         // executeWithNamedLock을 모킹해서 operation인 두 번째 메소드를 리턴하도록 함
         doAnswer(invocation -> invocation.getArgument(1)).when(namedLockManager).executeWithNamedLock(
-                eq("hero_quote_" + heroId),
+                eq("hquote_" + heroId),
                 any()
         );
 
@@ -66,13 +76,16 @@ class BResultFacadeTest {
 
         doReturn(Mono.just(currentIndex))
                 .when(heroQuoteKrService)
-                .findLatestVersionByIdKindSeq(eq(heroId), eq(HERO_QUOTE_KR_KIND), eq(HERO_QUOTE_KR_SEQ));
+                .getLatestIndexForHeroQuoteKr(eq(heroId));
 
 
+        doReturn(Mono.just(batchQuoteInfoCompleted))
+                .when(batchQuoteInfoService)
+                .updateBatchQuoteInfoComplete(batchQuoteInfo);
 
 
         // then
-        StepVerifier.create(bResultFacade.processAndInsertHeroQuoteKr(heroId, apiResults))
+        StepVerifier.create(bResultFacade.processAndInsertHeroQuoteKr(batchQuoteInfo, apiResults))
                 .expectSubscription()
                 .verifyComplete();
 
@@ -87,6 +100,9 @@ class BResultFacadeTest {
         assertEquals(1, firstHeroQuoteKr.getStatus());
         assertEquals("home test1", firstHeroQuoteKr.getText());
         assertEquals(heroId, firstHeroQuoteKr.getId());
+
+        verify(batchQuoteInfoService).updateBatchQuoteInfoComplete(batchQuoteInfoCaptor.capture());
+        assertEquals(BatchStatus.COMPLETED, batchQuoteInfoCompleted.getStatus());
 
     }
 }

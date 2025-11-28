@@ -9,4 +9,5 @@ import reactor.core.publisher.Mono;
 public interface BatchQuoteInfoRepository extends R2dbcRepository<BatchQuoteInfo, Integer>, BatchQuoteInfoCustomRepository {
     Mono<BatchQuoteInfo> findByIdx(int idx);
     Flux<BatchQuoteInfo> findByBatchInfoId(int batchInfoId);
+    Mono<BatchQuoteInfo> findFirstByHeroIdAndBatchInfoId(String heroId, int batchInfoId);
 }
