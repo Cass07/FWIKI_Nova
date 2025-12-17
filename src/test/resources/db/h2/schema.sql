@@ -33,7 +33,7 @@ CREATE TABLE `batch_info` (
                                        `batch_id` VARCHAR(35) NOT NULL DEFAULT '0',
                                        `stat` VARCHAR(20) NOT NULL DEFAULT '0',
                                        `created_at` DATETIME NOT NULL,
-                                       `updated_at` DATETIME NOT NULL
+                                       `updated_at` DATETIME
 );
 
 CREATE TABLE `batch_quote_info` (

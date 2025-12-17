@@ -17,3 +17,10 @@ spring:
 logging:
   level:
     org.springframework.r2dbc.core: debug
+
+openai:
+  base-url: "https://api.openai.com/v1"
+  api-key: ${OPENAI_API_KEY}
+  org-id: ${OPENAI_ORG_ID}
+  project: ${OPENAI_PROJECT_ID}
+  webhook-secret: ${OPENAI_WEBHOOK_SECRET}

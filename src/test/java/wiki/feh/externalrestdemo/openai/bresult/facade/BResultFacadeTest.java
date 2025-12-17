@@ -85,7 +85,7 @@ class BResultFacadeTest {
 
 
         // then
-        StepVerifier.create(bResultFacade.processAndInsertHeroQuoteKr(batchQuoteInfo, apiResults))
+        StepVerifier.create(bResultFacade.lockHeroIdAndInsertHeroQuoteKr(batchQuoteInfo, apiResults))
                 .expectSubscription()
                 .verifyComplete();
 

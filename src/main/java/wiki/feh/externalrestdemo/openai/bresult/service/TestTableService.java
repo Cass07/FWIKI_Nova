@@ -21,7 +21,7 @@ public class TestTableService {
         String lockName = "test_table_" + id;
 
         return namedLockManager.executeWithNamedLock(lockName,
-                testTableRepository.findById(id)
+                () -> testTableRepository.findById(id)
                         .flatMap(testTable -> {
                             testTable.decreaseValue2();
                             return testTableRepository.save(testTable);

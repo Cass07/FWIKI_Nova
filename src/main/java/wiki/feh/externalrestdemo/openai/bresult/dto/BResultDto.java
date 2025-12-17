@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 public class BResultDto {
 
     @Getter
+    @NoArgsConstructor
     @AllArgsConstructor
     public static class ApiResult {
         private String key;

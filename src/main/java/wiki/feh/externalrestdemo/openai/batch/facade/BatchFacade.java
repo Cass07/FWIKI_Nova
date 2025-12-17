@@ -115,7 +115,7 @@ public class BatchFacade {
                 // json string 리스트로 외부 api 요청
                 .flatMap(openAPIService::callRequestBatchApi)
                 // 응답을 받아서 batchInfo 업데이트
-                .flatMap(batchId -> batchInfoService.updateBatchInfoRunning(savedInfo, batchId))
+                .flatMap(batchId -> batchInfoService.updateBatchInfoRequested(savedInfo, batchId))
                 .onErrorResume(error -> {
                     log.error("Error during batch processing for batch id {}: {}", batchInfoId, error.getMessage());
                     return batchInfoService.updateBatchInfoFailed(savedInfo);

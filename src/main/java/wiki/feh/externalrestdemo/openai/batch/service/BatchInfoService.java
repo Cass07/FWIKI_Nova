@@ -32,10 +32,26 @@ public class BatchInfoService {
         return this.saveBatchInfo(batchInfo);
     }
 
-    // BatchInfo의 batchId를 갱신하고 상태를 RUNNING으로 업데이트
-    public Mono<BatchInfo> updateBatchInfoRunning(BatchInfo batchInfo, String batchId) {
-        batchInfo.updateBatchId(batchId);
+    public Mono<BatchInfo> updateBatchInfoRunning(BatchInfo batchInfo) {
         batchInfo.updateStatus(BatchStatus.RUNNING);
         return this.saveBatchInfo(batchInfo);
+    }
+
+    public Mono<BatchInfo> updateBatchInfoCompleted(BatchInfo batchInfo) {
+        log.info("Updating BatchInfo id: {} to COMPLETED", batchInfo.getIdx());
+        batchInfo.updateStatus(BatchStatus.COMPLETED);
+        return this.saveBatchInfo(batchInfo);
+    }
+
+    // BatchInfo의 batchId를 갱신하고 상태를 Requested으로 업데이트
+    public Mono<BatchInfo> updateBatchInfoRequested(BatchInfo batchInfo, String batchId) {
+        batchInfo.updateBatchId(batchId);
+        batchInfo.updateStatus(BatchStatus.REQUESTED);
+        return this.saveBatchInfo(batchInfo);
+    }
+
+    // batchId 로 BatchInfo 조회
+    public Mono<BatchInfo> getBatchInfoByBatchId(String batchId) {
+        return batchInfoRepository.findByBatchId(batchId);
     }
 }
