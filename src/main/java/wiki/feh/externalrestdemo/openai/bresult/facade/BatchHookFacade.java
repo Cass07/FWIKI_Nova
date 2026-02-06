@@ -27,9 +27,7 @@ public class BatchHookFacade {
     @Qualifier("BatchResultJsonParseV1")
     private final IBatchResultJsonParse batchResultJsonParse;
 
-    /**
-     * webhook에서 수신한 데이터를 가공하는 facade
-     */
+    //webhook에서 수신한 데이터를 가공하는 facade
 
     /**
      * batch id로 BatchInfo 조회 후, 상태가 REQUESTED인지 검증
@@ -59,7 +57,7 @@ public class BatchHookFacade {
      * @param jsonlList
      * @return
      */
-    private Mono<Map<String, List<BResultDto.ApiResult>>> parseResponseJsonList(List<String> jsonlList) {
+    public Mono<Map<String, List<BResultDto.ApiResult>>> parseResponseJsonList(List<String> jsonlList) {
         return Flux.fromIterable(jsonlList)
                 .mapNotNull(jsonString -> {
                     try {

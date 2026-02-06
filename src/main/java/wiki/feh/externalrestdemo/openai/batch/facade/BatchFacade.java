@@ -19,8 +19,10 @@ import wiki.feh.externalrestdemo.openai.api.service.OpenAPIService;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchInfo;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchQuoteInfo;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchStatus;
+import wiki.feh.externalrestdemo.openai.batch.dto.BatchDto;
 import wiki.feh.externalrestdemo.openai.batch.service.BatchInfoService;
 import wiki.feh.externalrestdemo.openai.batch.service.BatchQuoteInfoService;
+import wiki.feh.externalrestdemo.util.json.JsonWriter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -75,15 +77,16 @@ public class BatchFacade {
     // Controller에서 호출할 메인 메소드
     public Mono<BatchInfo> requestBatchJob(List<String> heroIds) {
         BatchInfo batchInfo = new BatchInfo().updateStatus(BatchStatus.PENDING);
-        // BatchInfo 저장하는 mono는 생성하고 바로 리턴시킨
-        Mono<BatchInfo> savedBatchInfo = batchInfoService.saveBatchInfo(batchInfo);
+        // saveBatchInfo를 hot sequence로 만들어서 다시 구독되더라도 insert가 한번만 발생하도록 함
+        Mono<BatchInfo> savedBatchInfo = batchInfoService.saveBatchInfo(batchInfo).cache();
 
-        // 후속 작업은 flatMap으로 연결해서 비동기 처리
-        savedBatchInfo
-            .flatMap(savedInfo -> heroQuoteBatchJob(heroIds, savedInfo))
-            .subscribeOn(Schedulers.boundedElastic())
-            .subscribe();
-
+        // 후속 작업은 별도의 스레드에서 비동기로 처리
+        savedBatchInfo.subscribe(
+                info -> heroQuoteBatchJob(heroIds, info)
+                        .subscribeOn(Schedulers.boundedElastic())
+                        .doOnError(error -> log.error("Error in batch job for batch id {}: {}", info.getIdx(), error.getMessage()))
+                        .subscribe()
+        );
         return savedBatchInfo;
     }
 
@@ -104,7 +107,12 @@ public class BatchFacade {
                 // quote 리스트를 json string list로 묶고 batchQuoteInfo 객체들도 묶어서 tuple2<list, list>로 리턴
                 .collect(() -> Tuples.<List<String>, List<BatchQuoteInfo>>of(new ArrayList<>(), new ArrayList<>()),
                         (acc, tuple) -> {
-                            acc.getT1().add(HeroQuoteDto.OpenAIBatchText.of(tuple.getT2()).getText());
+                            String batchRequestLineJson = JsonWriter.of(tuple.getT2()).getText();
+                            BatchDto.BatchRequestLine batchRequestLine = new BatchDto.BatchRequestLine(
+                                    tuple.getT1().getId(),
+                                    batchRequestLineJson
+                            );
+                            acc.getT1().add(JsonWriter.of(batchRequestLine).getText());
                             acc.getT2().add(tuple.getT3());
                         })
                 // batchQuoteInfo 리스트를 batch insert
@@ -150,6 +158,7 @@ public class BatchFacade {
                 .batchInfoId(batchInfoId)
                 .heroId(hero.getId())
                 .status(BatchStatus.PENDING)
+                .createdAt(java.time.LocalDateTime.now())
                 .build();
         return Tuples.of(hero, quotes, batchQuoteInfo);
     }

@@ -14,5 +14,10 @@ public class BResultDto {
         private String key;
         private int seq;
         private String result;
+
+        @Override
+        public String toString() {
+            return String.format("ApiResult(key=%s, seq=%d, result=%s)", key, seq, result);
+        }
     }
 }

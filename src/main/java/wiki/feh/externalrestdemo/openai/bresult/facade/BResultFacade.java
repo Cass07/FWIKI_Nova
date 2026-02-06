@@ -89,40 +89,50 @@ public class BResultFacade {
 
     /**
      * heroId로 named lock을 획득한 후, insertHeroQuoteKr 실행
+     *
      * @param batchQuoteInfo batch quote info entity
-     * @param results apiResult list (OpenAI response를 parsing한 것)
+     * @param results        apiResult list (OpenAI response를 parsing한 것)
      * @return void mono
      */
     public Mono<Void> lockHeroIdAndInsertHeroQuoteKr(BatchQuoteInfo batchQuoteInfo, List<BResultDto.ApiResult> results) {
         String lockKey = HERO_QUOTE_KR_LOCK_PREFIX + batchQuoteInfo.getHeroId();
         return namedLockManager.executeWithNamedLock(lockKey,
-                () -> insertHeroQuoteKr(batchQuoteInfo, results)
-        )
-        .then(batchQuoteInfoService.updateBatchQuoteInfoComplete(batchQuoteInfo))
-        .then();
+                        () -> insertHeroQuoteKr(batchQuoteInfo, results)
+                )
+                .then(batchQuoteInfoService.updateBatchQuoteInfoComplete(batchQuoteInfo))
+                .then();
     }
 
     /**
      * heroId로 기존 kr 데이터를 조회해서, 신규 인덱스를 생성하여 entity list를 생성하고 이를 batch save
+     *
      * @param batchQuoteInfo batch quote info entity
-     * @param results apiResult list (OpenAI response를 parsing한 것)
+     * @param results        apiResult list (OpenAI response를 parsing한 것)
      * @return void
      */
     public Mono<Void> insertHeroQuoteKr(BatchQuoteInfo batchQuoteInfo, List<BResultDto.ApiResult> results) {
         String heroId = batchQuoteInfo.getHeroId();
         return heroQuoteKrService.getLatestIndexForHeroQuoteKr(heroId)
-                .flatMap(index ->
-                        convertResultToHeroQuoteKr(heroId, index + 1, 1, results)
+                .flatMap(index -> {
+                            // 기존 데이터가 없을때만 공개 데이터로 설정, 아니면 비공개로 설정
+                            // TODO:: 신장만 갱신할때 생각 필요
+                            int status = 1;
+                            if (index != 0) {
+                                status = 2;
+                            }
+                            return convertResultToHeroQuoteKr(heroId, index + 1, status, results);
+                        }
                 )
                 .flatMap(heroQuoteKrService::batchSaveHeroQuoteKrList);
     }
 
     /**
      * API 결과를 HeroQuoteKr 엔티티 리스트로 변환
-     * @param heroId hero idx
+     *
+     * @param heroId   hero idx
      * @param newIndex 신규 version index
-     * @param status 공개 여부 (1: 공개, 2: 비공개)
-     * @param results apiResult list (OpenAI response를 parsing한 것)
+     * @param status   공개 여부 (1: 공개, 2: 비공개)
+     * @param results  apiResult list (OpenAI response를 parsing한 것)
      * @return HeroQuoteKr list Mono
      */
     private Mono<List<HeroQuoteKr>> convertResultToHeroQuoteKr(String heroId, int newIndex, int status, List<BResultDto.ApiResult> results) {

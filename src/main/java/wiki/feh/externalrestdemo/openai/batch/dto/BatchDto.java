@@ -44,6 +44,19 @@ public class BatchDto {
             );
         }
 
+        public BatchRequestLine(String custom_id, String input) {
+            this.custom_id = custom_id;
+            this.method = "POST";
+            this.url = "/v1/responses";
+            this.body = new BatchRequestLineBody(
+                    "gpt-5-mini",
+                    input,
+                    new BatchRequestLineBodyPrompt("pmpt_689c5a60f0208190a4cca24aa5ee8a880b43f2a754288881"),
+                    new BatchRequestLineBodyText(new BatchRequestLineBodyTextFormat("text")),
+                    16384
+            );
+        }
+
     }
 
     @Getter
