@@ -1,7 +1,5 @@
 package wiki.feh.externalrestdemo.heroquote.dto;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -69,25 +67,5 @@ public class HeroQuoteDto {
             );
         }
 
-    }
-
-
-    /**
-     * OpenAIBatchRequest list를 json string으로 변환하는 dto
-     * 여기서 따로 할필요있나 그냥 ObjectMapper로 변환하면 될것같기도하고
-     */
-    @Getter
-    @AllArgsConstructor
-    public static class OpenAIBatchText {
-        private String text;
-        private static final ObjectMapper objectMapper = new ObjectMapper();
-
-        public static OpenAIBatchText of (OpenAiBatchRequest dto){
-            try {
-                return new OpenAIBatchText(objectMapper.writeValueAsString(dto));
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
-            }
-        }
     }
 }

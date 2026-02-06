@@ -15,7 +15,7 @@ import java.time.LocalDate;
 @Table(name = "`hero_list`")
 public class Hero {
     @Id
-    @Column("`id`")
+    @Column("id")
     private String id;
 
     @Column("korname")
@@ -26,7 +26,7 @@ public class Hero {
     private String jpName;
     @Column("jpnamesub")
     private String jpNameSub;
-    @Column("`name`")
+    @Column("name")
     private String enName;
 
     @Column("releasedate")

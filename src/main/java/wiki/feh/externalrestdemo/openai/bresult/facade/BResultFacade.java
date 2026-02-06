@@ -7,12 +7,16 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import wiki.feh.externalrestdemo.heroquote.domain.HeroQuoteKr;
 import wiki.feh.externalrestdemo.heroquote.service.HeroQuoteKrService;
+import wiki.feh.externalrestdemo.openai.batch.domain.BatchInfo;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchQuoteInfo;
+import wiki.feh.externalrestdemo.openai.batch.domain.BatchStatus;
+import wiki.feh.externalrestdemo.openai.batch.service.BatchInfoService;
 import wiki.feh.externalrestdemo.openai.batch.service.BatchQuoteInfoService;
 import wiki.feh.externalrestdemo.openai.bresult.dto.BResultDto;
 import wiki.feh.externalrestdemo.util.NamedLockManager;
 
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Component
@@ -22,6 +26,7 @@ public class BResultFacade {
     private final HeroQuoteKrService heroQuoteKrService;
     private final BatchQuoteInfoService batchQuoteInfoService;
     private final NamedLockManager namedLockManager;
+    private final BatchInfoService batchInfoService;
 
     /*
      * flow
@@ -46,46 +51,88 @@ public class BResultFacade {
      * 7. BatchQuoteInfo 상태 COMPLETED로 변경
      *
      * - 상위 블록애서 BatchInfo의 상태 변경, logging 필요
-     *
-     * data가 있는데 BatchQuoteInfo가 없으면 버릴 것인가???? <-버려야지...
      */
 
     /**
+     * BatchInfo 객체와 Dto List를 받아서 (BatchInfo는 존재함이 보장됨)
+     * 작업 시작 전 batchInfo 상태가 requested인지 확인하고, running으로 바꿈
+     * 그 후, 각 BatchQuoteInfo에 대해 processAndInsertHeroQuoteKr 실행
+     * 모두 종료되면 batchInfo 상태를 completed로 바꿈
+     */
+    public Mono<BatchInfo> processInsertBResults(BatchInfo batchInfo, Map<String, List<BResultDto.ApiResult>> resultList) {
+        return Mono.just(batchInfo)
+                .flatMap(bi -> {
+                    if (!bi.getStatus().equals(BatchStatus.REQUESTED)) {
+                        log.warn("BatchInfo id {} is not in Requested status. Current status: {}. Aborting process.", bi.getIdx(), bi.getStatus());
+                        return Mono.empty();
+                    }
+                    return batchInfoService.updateBatchInfoRunning(bi);
+                })
+                // 내부 작업이 모두 끝날 때까지 원본 객체를 유지하며 작업 완료 대기
+                .delayUntil(bi ->
+                        // 각 batchQuoteInfo에 대해서 맞는 resultList를 가지고 processAndInsertHeroQuoteKr 실행
+                        batchQuoteInfoService.findBatchQuoteInfoByBatchInfoId(bi.getIdx())
+                                // batchQuoteInfo를 순회하면서 resultList에서 매칭되는 heroId가 있는지 확인하고, 있으면 lockHeroIdAndInsertHeroQuoteKr 실행
+                                .flatMap(batchQuoteInfo -> {
+                                    if (!resultList.containsKey(batchQuoteInfo.getHeroId())) {
+                                        log.warn("No results found for heroId {} in BatchQuoteInfo id {}. Skipping.",
+                                                batchQuoteInfo.getHeroId(), batchQuoteInfo.getIdx());
+                                        return Mono.empty();
+                                    }
+                                    return lockHeroIdAndInsertHeroQuoteKr(batchQuoteInfo, resultList.get(batchQuoteInfo.getHeroId()));
+                                })
+                                .then()  // 모든 작업 완료 대기
+                )
+                .flatMap(batchInfoService::updateBatchInfoCompleted);
+    }
+
+
+    /**
      * heroId로 named lock을 획득한 후, insertHeroQuoteKr 실행
+     *
      * @param batchQuoteInfo batch quote info entity
-     * @param results apiResult list (OpenAI response를 parsing한 것)
+     * @param results        apiResult list (OpenAI response를 parsing한 것)
      * @return void mono
      */
-    public Mono<Void> processAndInsertHeroQuoteKr(BatchQuoteInfo batchQuoteInfo, List<BResultDto.ApiResult> results) {
+    public Mono<Void> lockHeroIdAndInsertHeroQuoteKr(BatchQuoteInfo batchQuoteInfo, List<BResultDto.ApiResult> results) {
         String lockKey = HERO_QUOTE_KR_LOCK_PREFIX + batchQuoteInfo.getHeroId();
         return namedLockManager.executeWithNamedLock(lockKey,
-                insertHeroQuoteKr(batchQuoteInfo, results)
-        )
-        .then(batchQuoteInfoService.updateBatchQuoteInfoComplete(batchQuoteInfo))
-        .then();
+                        () -> insertHeroQuoteKr(batchQuoteInfo, results)
+                )
+                .then(batchQuoteInfoService.updateBatchQuoteInfoComplete(batchQuoteInfo))
+                .then();
     }
 
     /**
      * heroId로 기존 kr 데이터를 조회해서, 신규 인덱스를 생성하여 entity list를 생성하고 이를 batch save
+     *
      * @param batchQuoteInfo batch quote info entity
-     * @param results apiResult list (OpenAI response를 parsing한 것)
+     * @param results        apiResult list (OpenAI response를 parsing한 것)
      * @return void
      */
     public Mono<Void> insertHeroQuoteKr(BatchQuoteInfo batchQuoteInfo, List<BResultDto.ApiResult> results) {
         String heroId = batchQuoteInfo.getHeroId();
         return heroQuoteKrService.getLatestIndexForHeroQuoteKr(heroId)
-                .flatMap(index ->
-                        convertResultToHeroQuoteKr(heroId, index + 1, 1, results)
+                .flatMap(index -> {
+                            // 기존 데이터가 없을때만 공개 데이터로 설정, 아니면 비공개로 설정
+                            // TODO:: 신장만 갱신할때 생각 필요
+                            int status = 1;
+                            if (index != 0) {
+                                status = 2;
+                            }
+                            return convertResultToHeroQuoteKr(heroId, index + 1, status, results);
+                        }
                 )
                 .flatMap(heroQuoteKrService::batchSaveHeroQuoteKrList);
     }
 
     /**
      * API 결과를 HeroQuoteKr 엔티티 리스트로 변환
-     * @param heroId hero idx
+     *
+     * @param heroId   hero idx
      * @param newIndex 신규 version index
-     * @param status 공개 여부 (1: 공개, 2: 비공개)
-     * @param results apiResult list (OpenAI response를 parsing한 것)
+     * @param status   공개 여부 (1: 공개, 2: 비공개)
+     * @param results  apiResult list (OpenAI response를 parsing한 것)
      * @return HeroQuoteKr list Mono
      */
     private Mono<List<HeroQuoteKr>> convertResultToHeroQuoteKr(String heroId, int newIndex, int status, List<BResultDto.ApiResult> results) {

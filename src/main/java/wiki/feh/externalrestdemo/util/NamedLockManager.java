@@ -8,6 +8,8 @@ import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Mono;
 
+import java.util.function.Supplier;
+
 @Slf4j
 @RequiredArgsConstructor
 @Repository
@@ -15,10 +17,10 @@ public class NamedLockManager {
     private final DatabaseClient databaseClient;
     private final ConnectionFactory connectionFactory;
 
-    public Mono<Void> executeWithNamedLock(String lockName, Mono<Void> operation) {
+    public Mono<Void> executeWithNamedLock(String lockName, Supplier<Mono<Void>> operation) {
         return Mono.usingWhen(
                 Mono.from(connectionFactory.create()),
-                conn -> acquireLock(lockName, conn).then(operation),
+                conn -> acquireLock(lockName, conn).then(operation.get()),
                 conn -> releaseLock(lockName, conn)
                         .onErrorResume(err -> {
                             log.error("Error releasing lock, but closing connection anyway", err);

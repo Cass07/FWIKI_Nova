@@ -10,6 +10,7 @@ import org.springframework.test.context.ActiveProfiles;
 import reactor.core.publisher.Mono;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchInfo;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchInfoRepository;
+import wiki.feh.externalrestdemo.openai.batch.domain.BatchStatus;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -93,7 +94,7 @@ class BatchInfoServiceTest {
 
     @DisplayName("updateBatchInfoRunning updates batchId and status to RUNNING")
     @Test
-    void updateBatchInfoRunning_UpdatesBatchIdAndStatusToRunning() {
+    void updateBatchInfoRunning_UpdatesBatchIdAndStatusToRequested() {
         // given
         String initialBatchId = "batch_123";
         String newBatchId = "batch_456";
@@ -102,7 +103,7 @@ class BatchInfoServiceTest {
         BatchInfo updatedBatchInfo = BatchInfo.builder()
                 .idx(1)
                 .batchId(newBatchId)
-                .status(wiki.feh.externalrestdemo.openai.batch.domain.BatchStatus.RUNNING)
+                .status(BatchStatus.RUNNING)
                 .createdAt(batchInfo.getCreatedAt())
                 .updatedAt(batchInfo.getUpdatedAt())
                 .build();
@@ -111,7 +112,7 @@ class BatchInfoServiceTest {
             .when(batchInfoRepository).save(any(BatchInfo.class));
 
         // when
-        BatchInfo result = batchInfoService.updateBatchInfoRunning(batchInfo, newBatchId).block();
+        BatchInfo result = batchInfoService.updateBatchInfoRequested(batchInfo, newBatchId).block();
 
         // then
         assertNotNull(result);
@@ -119,4 +120,69 @@ class BatchInfoServiceTest {
         assertEquals("RUNNING", result.getStatus().name());
     }
 
+    @DisplayName("UpdateBatchInfoCompleted updates status to COMPLETE")
+    @Test
+    void updateBatchInfoCompleted_UpdatesStatusToComplete() {
+        // given
+        String batchId = "batch_123";
+        BatchInfo batchInfo = new BatchInfo(batchId);
+
+        BatchInfo updatedBatchInfo = BatchInfo.builder()
+                .idx(1)
+                .batchId(batchId)
+                .status(BatchStatus.COMPLETED)
+                .createdAt(batchInfo.getCreatedAt())
+                .updatedAt(batchInfo.getUpdatedAt())
+                .build();
+
+        doReturn(Mono.just(updatedBatchInfo))
+            .when(batchInfoRepository).save(any(BatchInfo.class));
+
+        // when
+        BatchInfo result = batchInfoService.updateBatchInfoCompleted(batchInfo).block();
+
+        // then
+        assertNotNull(result);
+        assertEquals("COMPLETED", result.getStatus().name());
+    }
+
+    @DisplayName("getBatchInfoByBatchId retrieves BatchInfo by batchId")
+    @Test
+    void getBatchInfoByBatchId_RetrievesBatchInfoByBatchId() {
+        // given
+        String batchId = "batch_123";
+        BatchInfo batchInfo = BatchInfo.builder()
+                .idx(1)
+                .batchId(batchId)
+                .status(BatchStatus.PENDING)
+                .createdAt(null)
+                .updatedAt(null)
+                .build();
+
+        doReturn(Mono.just(batchInfo))
+            .when(batchInfoRepository).findByBatchId(batchId);
+
+        // when
+        BatchInfo result = batchInfoService.getBatchInfoByBatchId(batchId).block();
+
+        // then
+        assertNotNull(result);
+        assertEquals(batchId, result.getBatchId());
+    }
+
+    @DisplayName("getBatchInfoByBatchId returns empty when not found")
+    @Test
+    void getBatchInfoByBatchId_ReturnsEmptyWhenNotFound() {
+        // given
+        String batchId = "non_existent_batch";
+
+        doReturn(Mono.empty())
+            .when(batchInfoRepository).findByBatchId(batchId);
+
+        // when
+        Mono<BatchInfo> resultMono = batchInfoService.getBatchInfoByBatchId(batchId);
+
+        // then
+        assertNull(resultMono.block());
+    }
 }

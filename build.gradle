@@ -42,10 +42,13 @@ dependencies {
     runtimeOnly group: 'io.jsonwebtoken', name: 'jjwt-jackson', version: '0.11.2'
 
     // openai
-    implementation "com.openai:openai-java-spring-boot-starter:3.5.2"
+    implementation "com.openai:openai-java-spring-boot-starter:4.8.0"
 
+    // lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
+
+    // tester
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
 //    implementation 'org.testcontainers:junit-jupiter'

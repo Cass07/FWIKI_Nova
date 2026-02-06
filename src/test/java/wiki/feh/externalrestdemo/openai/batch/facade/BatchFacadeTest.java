@@ -180,13 +180,13 @@ class BatchFacadeTest {
         doReturn(Mono.just(batchApiResponseId))
                 .when(openAPIService).callRequestBatchApi(any());
 
-        doReturn(Mono.just(batchInfo.updateBatchId("external-batch-id-123").updateStatus(BatchStatus.RUNNING)))
-                .when(batchInfoService).updateBatchInfoRunning(any(BatchInfo.class), eq(batchApiResponseId));
+        doReturn(Mono.just(batchInfo.updateBatchId("external-batch-id-123").updateStatus(BatchStatus.REQUESTED)))
+                .when(batchInfoService).updateBatchInfoRequested(any(BatchInfo.class), eq(batchApiResponseId));
 
         // when, then
         StepVerifier.create(batchFacade.heroQuoteBatchJob(heroIds, batchInfo))
                 .expectSubscription()
-                .expectNextMatches(bi -> bi.getIdx() == batchInfo.getIdx() && bi.getStatus() == BatchStatus.RUNNING && batchApiResponseId.equals(bi.getBatchId()))
+                .expectNextMatches(bi -> bi.getIdx() == batchInfo.getIdx() && bi.getStatus() == BatchStatus.REQUESTED && batchApiResponseId.equals(bi.getBatchId()))
                 .verifyComplete();
 
         // then - batchQuoteInfo list 저장 검증
