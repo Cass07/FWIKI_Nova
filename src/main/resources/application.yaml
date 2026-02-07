@@ -1,8 +1,13 @@
 spring.application.name: "externalRestDemo"
 
 
-jwt:
-  secret: ${JWT_SECRET}
+cloud:
+  aws:
+    region:
+      static: ${AWS_REGION}
+    credentials:
+      access-key: ${AWS_ACCESS_KEY}
+      secret-key: ${AWS_SECRET_KEY}
 
 spring:
   r2dbc:
@@ -23,4 +28,3 @@ openai:
   api-key: ${OPENAI_API_KEY}
   org-id: ${OPENAI_ORG_ID}
   project: ${OPENAI_PROJECT_ID}
-  webhook-secret: ${OPENAI_WEBHOOK_SECRET}
