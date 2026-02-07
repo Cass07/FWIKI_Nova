@@ -90,6 +90,17 @@ public class BatchFacade {
         return savedBatchInfo;
     }
 
+    // message listner에서 호출할 메인 메소드
+    public Mono<BatchInfo> requestBatchJobListener(List<String> heroIds) {
+        BatchInfo batchInfo = new BatchInfo().updateStatus(BatchStatus.PENDING);
+
+        return batchInfoService.saveBatchInfo(batchInfo)
+                .flatMap(savedInfo ->
+                    heroQuoteBatchJob(heroIds, savedInfo)
+                )
+                .doOnError(error -> log.error("Error in batch job: {}", error.getMessage()));
+    }
+
     // hero quote batch job 처리 메소드
     public Mono<BatchInfo> heroQuoteBatchJob(List<String> heroIds, BatchInfo savedInfo) {
         int batchInfoId = savedInfo.getIdx();

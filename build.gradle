@@ -54,6 +54,10 @@ dependencies {
 //    implementation 'org.testcontainers:junit-jupiter'
 //    implementation 'org.testcontainers:r2dbc'
 
+    // sqs
+    implementation platform("io.awspring.cloud:spring-cloud-aws-dependencies:3.0.1")
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-sqs'
+
     testRuntimeOnly 'com.h2database:h2'
     testRuntimeOnly 'io.r2dbc:r2dbc-h2'
 }

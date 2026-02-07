@@ -40,7 +40,7 @@ public class BResultController {
     @GetMapping("/api/v1/webhook/result/{batchId}")
     public Mono<Void> testWebhook(@PathVariable String batchId) {
 
-        // batchId database에서 조회하고, 작업 가능환 상태인지 검증
+        // batchId database에서 조회하고, 작업 가능한 상태인지 검증
         return batchHookFacade.verifyBatchId(batchId)
                 .flatMap(batchInfo -> {
                     log.info("Verified batchInfo: {}", batchInfo.getBatchId());
@@ -70,9 +70,9 @@ public class BResultController {
                             }))
                             .then()
                             .doOnSuccess(_ -> log.info("Successfully processed batch result for batchId: {}", verifyBatchId))
-                            .onErrorResume(error -> {
+                            .doOnError(error -> {
                                 log.error("Failed to process batch result for batchId {}: {}", verifyBatchId, error.getMessage());
-                                return Mono.empty();
+                                //return Mono.empty();
                             });
                 });
     }
@@ -91,9 +91,10 @@ public class BResultController {
                 }))
                 .then()
                 .doOnSuccess(_ -> log.info("Successfully processed batch result for batchId: {}", batchId))
-                .onErrorResume(error -> {
+                .doOnError(error -> {
                     log.error("Failed to process batch result for batchId {}: {}", batchId, error.getMessage());
-                    return Mono.empty();
+                    throw new RuntimeException(error);
+                    //return Mono.empty();
                 });
 
     }
