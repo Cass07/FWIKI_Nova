@@ -42,4 +42,10 @@ public class BatchQuoteInfoService {
         batchQuoteInfo.updateStatus(BatchStatus.COMPLETED);
         return batchQuoteInfoRepository.save(batchQuoteInfo);
     }
+
+    @Transactional
+    public Mono<Void> updateBatchQuoteInfoListStatusToFailed(int batchInfoId) {
+        return batchQuoteInfoRepository.updateStatusToFailedByBatchInfoIdAndStatus(batchInfoId, BatchStatus.PENDING.getKey())
+                .then();
+    }
 }

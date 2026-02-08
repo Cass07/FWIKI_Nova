@@ -7,9 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Component;
-import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Mono;
-import wiki.feh.externalrestdemo.openai.batch.domain.BatchInfo;
 import wiki.feh.externalrestdemo.openai.batch.facade.BatchFacade;
 import wiki.feh.externalrestdemo.openai.bresult.controller.BResultController;
 
@@ -61,12 +59,8 @@ public class SQSListeners {
         bResultController.testWebhook(batchId)
                 .then(Mono.defer(() -> Mono.fromFuture(acknowledgement.acknowledgeAsync())
                         .then()))
-                .doOnSuccess(_ -> {
-                    log.info("Processed webhook for batch-id: {}", batchId);
-                })
-                .doOnError(error -> {
-                    log.error("Error processing webhook for batch-id {}: {}", batchId, error.getMessage());
-                })
+                .doOnSuccess(_ -> log.info("Processed webhook for batch-id: {}", batchId))
+                .doOnError(error -> log.error("Error processing webhook for batch-id {}: {}", batchId, error.getMessage()))
                 .subscribe();
     }
 }

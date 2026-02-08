@@ -81,7 +81,11 @@ public class BResultFacade {
                                     }
                                     return lockHeroIdAndInsertHeroQuoteKr(batchQuoteInfo, resultList.get(batchQuoteInfo.getHeroId()));
                                 })
-                                .then()  // 모든 작업 완료 대기
+                                .then(Mono.defer(() -> {
+                                    // bi 이하의 batchQuoteInfo 중 Pending인 것을 FAILED로 변경
+                                    log.info("All BatchQuoteInfo processing completed for BatchInfo id {}", bi.getIdx());
+                                    return batchQuoteInfoService.updateBatchQuoteInfoListStatusToFailed(bi.getIdx());
+                                }))  // 모든 작업 완료 대기
                 )
                 .flatMap(batchInfoService::updateBatchInfoCompleted);
     }
@@ -92,15 +96,14 @@ public class BResultFacade {
      *
      * @param batchQuoteInfo batch quote info entity
      * @param results        apiResult list (OpenAI response를 parsing한 것)
-     * @return void mono
+     * @return Mono<BatchQuoteInfo>
      */
-    public Mono<Void> lockHeroIdAndInsertHeroQuoteKr(BatchQuoteInfo batchQuoteInfo, List<BResultDto.ApiResult> results) {
+    public Mono<BatchQuoteInfo> lockHeroIdAndInsertHeroQuoteKr(BatchQuoteInfo batchQuoteInfo, List<BResultDto.ApiResult> results) {
         String lockKey = HERO_QUOTE_KR_LOCK_PREFIX + batchQuoteInfo.getHeroId();
         return namedLockManager.executeWithNamedLock(lockKey,
                         () -> insertHeroQuoteKr(batchQuoteInfo, results)
                 )
-                .then(batchQuoteInfoService.updateBatchQuoteInfoComplete(batchQuoteInfo))
-                .then();
+                .then(Mono.defer(() -> batchQuoteInfoService.updateBatchQuoteInfoComplete(batchQuoteInfo)));
     }
 
     /**
