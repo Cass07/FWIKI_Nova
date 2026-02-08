@@ -49,7 +49,7 @@ public class SQSConfig{
         return SqsMessageListenerContainerFactory
                 .builder()
                 .configure(option -> option
-                        .acknowledgementMode(AcknowledgementMode.ALWAYS))
+                        .acknowledgementMode(AcknowledgementMode.MANUAL))
                 .sqsAsyncClient(sqsAsyncClient)
                 .build();
     }

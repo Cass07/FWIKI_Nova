@@ -29,7 +29,7 @@ public class HeroQuoteKrRepositoryImpl implements HeroQuoteKrCustomRepository {
 
     private String heroQuoteKrToValueString(HeroQuoteKr hq) {
         return String.format("('%s', '%s', %d, '%s', %d, %d, %d)",
-                hq.getId(),
+                hq.getId().replace("'", "''"), // 작은따옴표 이스케이프 처리
                 hq.getKind(),
                 hq.getSeq(),
                 hq.getText().replace("'", "''"), // 작은따옴표 이스케이프 처리

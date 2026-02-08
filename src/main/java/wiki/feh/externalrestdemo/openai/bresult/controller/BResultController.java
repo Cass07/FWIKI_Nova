@@ -55,7 +55,7 @@ public class BResultController {
                             })
                             // 파일 내용을 줄 단위로 분리해서 list로 묶음
                             .flatMapMany(fileContent -> {
-                                log.debug("Retrieved file content for batchId {}: {}", verifyBatchId, fileContent);
+                                //log.debug("Retrieved file content for batchId {}: {}", verifyBatchId, fileContent);
                                 return Flux.fromArray(fileContent.split("\n"));
                             })
                             .collectList()
