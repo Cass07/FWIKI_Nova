@@ -59,7 +59,7 @@ public class BResultFacade {
      * 그 후, 각 BatchQuoteInfo에 대해 processAndInsertHeroQuoteKr 실행
      * 모두 종료되면 batchInfo 상태를 completed로 바꿈
      */
-    public Mono<BatchInfo> processInsertBResults(BatchInfo batchInfo, Map<String, List<BResultDto.ApiResult>> resultList) {
+    public Mono<BatchInfo> insertApiResultToHeroQuoteKr(BatchInfo batchInfo, Map<String, List<BResultDto.ApiResult>> resultList) {
         return Mono.just(batchInfo)
                 .flatMap(bi -> {
                     if (!bi.getStatus().equals(BatchStatus.REQUESTED)) {

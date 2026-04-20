@@ -62,4 +62,11 @@ public class BatchInfo {
         this.updatedAt = LocalDateTime.now();
         return this;
     }
+
+    public BatchInfo verifyUpdatable() {
+        if (!this.status.equals(BatchStatus.REQUESTED)) {
+            throw new IllegalStateException("BatchInfo status is not REQUESTED for batchId: " + this.batchId);
+        }
+        return this;
+    }
 }

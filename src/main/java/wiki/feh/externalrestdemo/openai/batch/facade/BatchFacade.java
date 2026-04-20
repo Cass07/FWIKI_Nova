@@ -76,35 +76,19 @@ public class BatchFacade {
      * 7. API 응답을 받아서 batchInfo에 배치 고유 id와, 상태를 진행중으로 업데이트
      */
 
-    // Controller에서 호출할 메인 메소드
+    // 외부에서 호출할 메인 로직 메소드
     public Mono<BatchInfo> requestBatchJob(List<String> heroIds) {
-        BatchInfo batchInfo = new BatchInfo().updateStatus(BatchStatus.PENDING);
-        // saveBatchInfo를 hot sequence로 만들어서 다시 구독되더라도 insert가 한번만 발생하도록 함
-        Mono<BatchInfo> savedBatchInfo = batchInfoService.saveBatchInfo(batchInfo).cache();
-
-        // 후속 작업은 별도의 스레드에서 비동기로 처리
-        savedBatchInfo.subscribe(
-                info -> heroQuoteBatchJob(heroIds, info)
-                        .subscribeOn(Schedulers.boundedElastic())
-                        .doOnError(error -> log.error("Error in batch job for batch id {}: {}", info.getIdx(), error.getMessage()))
-                        .subscribe()
-        );
-        return savedBatchInfo;
-    }
-
-    // message listner에서 호출할 메인 메소드
-    public Mono<BatchInfo> requestBatchJobListener(List<String> heroIds) {
         BatchInfo batchInfo = new BatchInfo().updateStatus(BatchStatus.PENDING);
 
         return batchInfoService.saveBatchInfo(batchInfo)
                 .flatMap(savedInfo ->
-                    heroQuoteBatchJob(heroIds, savedInfo)
+                    requestHeroQuoteBatchJob(heroIds, savedInfo)
                 )
                 .doOnError(error -> log.error("Error in batch job: {}", error.getMessage()));
     }
 
     // hero quote batch job 처리 메소드
-    public Mono<BatchInfo> heroQuoteBatchJob(List<String> heroIds, BatchInfo savedInfo) {
+    public Mono<BatchInfo> requestHeroQuoteBatchJob(List<String> heroIds, BatchInfo savedInfo) {
         int batchInfoId = savedInfo.getIdx();
         log.debug("Preparing hero quote batch info for batch id: {}", batchInfoId);
 

@@ -9,7 +9,6 @@ import reactor.core.publisher.Mono;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchInfo;
-import wiki.feh.externalrestdemo.openai.batch.domain.BatchStatus;
 import wiki.feh.externalrestdemo.openai.batch.service.BatchInfoService;
 import wiki.feh.externalrestdemo.openai.bresult.dto.BResultDto;
 import wiki.feh.externalrestdemo.util.json.IBatchResultJsonParse;
@@ -34,14 +33,9 @@ public class BatchHookFacade {
      * @param batchId
      * @return
      */
-    public Mono<BatchInfo> verifyBatchId(String batchId) {
+    public Mono<BatchInfo> getUpdatableBatchInfoFromBatchId(String batchId) {
         return batchInfoService.getBatchInfoByBatchId(batchId)
-                .flatMap(batchInfo -> {
-                    if(!batchInfo.getStatus().equals(BatchStatus.REQUESTED)) {
-                        return Mono.error(new RuntimeException("BatchInfo status is not REQUESTED for batchId: " + batchId));
-                    }
-                    return Mono.just(batchInfo);
-                })
+                .flatMap(batchInfo -> Mono.just(batchInfo.verifyUpdatable()))
                 .switchIfEmpty(Mono.error(new RuntimeException("No BatchInfo found for batchId: " + batchId)));
     }
 

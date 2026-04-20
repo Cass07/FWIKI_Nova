@@ -39,7 +39,7 @@ class BatchHookFacadeTest {
 
     @DisplayName("verifyBatchId - requested 상태인 경우 성공")
     @Test
-    void verifyBatchId_Success() {
+    void getUpdatableBatchInfoFromBatchId_Success() {
         // given
         String batchId = "batch_123";
         BatchInfo batchInfo = BatchInfo.builder()
@@ -54,7 +54,7 @@ class BatchHookFacadeTest {
                 .when(batchInfoService).getBatchInfoByBatchId(batchId);
 
         // when, then
-        Mono<BatchInfo> resultMono = batchHookFacade.verifyBatchId(batchId);
+        Mono<BatchInfo> resultMono = batchHookFacade.getUpdatableBatchInfoFromBatchId(batchId);
         StepVerifier.create(resultMono)
                 .assertNext(result -> {
                     assertEquals(batchInfo.getBatchId(), result.getBatchId());
@@ -65,7 +65,7 @@ class BatchHookFacadeTest {
 
     @DisplayName("verifyBatchId - 상태가 requested가 아닌 경우 에러")
     @Test
-    void verifyBatchId_InvalidStatus() {
+    void getUpdatableBatchInfoFromBatchId_InvalidStatus() {
         // given
         String batchId = "batch_123";
         BatchInfo batchInfo = BatchInfo.builder()
@@ -80,7 +80,7 @@ class BatchHookFacadeTest {
                 .when(batchInfoService).getBatchInfoByBatchId(batchId);
 
         // when, then
-        Mono<BatchInfo> resultMono = batchHookFacade.verifyBatchId(batchId);
+        Mono<BatchInfo> resultMono = batchHookFacade.getUpdatableBatchInfoFromBatchId(batchId);
         StepVerifier.create(resultMono)
                 .expectErrorMatches(throwable -> throwable instanceof RuntimeException)
                 .verify();
@@ -88,7 +88,7 @@ class BatchHookFacadeTest {
 
     @DisplayName("verifyBatchId - batchId에 해당하는 BatchInfo가 없는 경우 에러")
     @Test
-    void verifyBatchId_BatchInfoNotFound() {
+    void verifyBatchId_Updatable_BatchInfoNotFound() {
         // given
         String batchId = "batch_123";
 
@@ -96,7 +96,7 @@ class BatchHookFacadeTest {
                 .when(batchInfoService).getBatchInfoByBatchId(batchId);
 
         // when, then
-        Mono<BatchInfo> resultMono = batchHookFacade.verifyBatchId(batchId);
+        Mono<BatchInfo> resultMono = batchHookFacade.getUpdatableBatchInfoFromBatchId(batchId);
         StepVerifier.create(resultMono)
                 .expectErrorMatches(throwable -> throwable instanceof RuntimeException)
                 .verify();

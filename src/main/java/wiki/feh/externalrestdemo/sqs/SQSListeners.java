@@ -35,7 +35,7 @@ public class SQSListeners {
                 .map(Message::getPayload)
                 .toList();
 
-        batchController.requestBatchJobListener(payloads)
+        batchController.requestBatchJob(payloads)
                 .flatMap(batchInfo -> sqsService.sendMessageToSQS(batchInfo.getBatchId(), "fehwiki-tran-batchid")
                         .doOnSuccess(_ -> log.info("Sent batch-id {} to SQS", batchInfo.getBatchId()))
                         .thenReturn(batchInfo))

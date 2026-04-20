@@ -15,10 +15,8 @@ import java.util.List;
 public class BatchController {
     private final BatchFacade batchFacade;
 
-    public Mono<BatchInfo> requestBatchJobListener(List<String> heroIds) {
-        log.info("Received batch create request from SQS listener");
-
-        return batchFacade.requestBatchJobListener(heroIds)
+    public Mono<BatchInfo> requestBatchJob(List<String> heroIds) {
+        return batchFacade.requestBatchJob(heroIds)
                 .doOnNext(batchInfo -> log.info("Batch job requested with id: {}", batchInfo.getIdx()));
     }
 }
