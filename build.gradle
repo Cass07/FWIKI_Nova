@@ -34,7 +34,7 @@ dependencies {
 
     // r2dbc
     implementation 'org.springframework.boot:spring-boot-starter-data-r2dbc'
-    runtimeOnly 'org.mariadb:r2dbc-mariadb'
+    implementation 'org.mariadb:r2dbc-mariadb'
 
     // security
     implementation group: 'io.jsonwebtoken', name: 'jjwt-api', version: '0.11.2'

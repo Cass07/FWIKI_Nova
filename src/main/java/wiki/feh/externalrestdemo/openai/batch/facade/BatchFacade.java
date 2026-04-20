@@ -2,6 +2,7 @@ package wiki.feh.externalrestdemo.openai.batch.facade;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -15,11 +16,11 @@ import wiki.feh.externalrestdemo.hero.service.HeroService;
 import wiki.feh.externalrestdemo.heroquote.domain.HeroQuote;
 import wiki.feh.externalrestdemo.heroquote.dto.HeroQuoteDto;
 import wiki.feh.externalrestdemo.heroquote.service.HeroQuoteService;
-import wiki.feh.externalrestdemo.openai.api.service.OpenAPIService;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchInfo;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchQuoteInfo;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchStatus;
 import wiki.feh.externalrestdemo.openai.batch.dto.BatchDto;
+import wiki.feh.externalrestdemo.openai.batch.infra.IBatchService;
 import wiki.feh.externalrestdemo.openai.batch.service.BatchInfoService;
 import wiki.feh.externalrestdemo.openai.batch.service.BatchQuoteInfoService;
 import wiki.feh.externalrestdemo.util.json.JsonWriter;
@@ -37,7 +38,8 @@ public class BatchFacade {
     private final HeroQuoteService heroQuoteService;
     private final HeroService heroService;
 
-    private final OpenAPIService openAPIService;
+    @Qualifier("OpenAIBatchService")
+    private final IBatchService openAIBatchService;
 
     public Mono<BatchInfo> asyncTest() {
         BatchInfo batchInfo = new BatchInfo().updateStatus(BatchStatus.PENDING);
@@ -132,7 +134,7 @@ public class BatchFacade {
                                 .thenReturn(batchRequestLineList)
                 ))
                 // json string 리스트로 외부 api 요청
-                .flatMap(openAPIService::callRequestBatchApi)
+                .flatMap(openAIBatchService::callRequestBatchApi)
                 // 응답을 받아서 batchInfo 업데이트
                 .flatMap(batchId -> batchInfoService.updateBatchInfoRequested(savedInfo, batchId))
                 .onErrorResume(error -> {
