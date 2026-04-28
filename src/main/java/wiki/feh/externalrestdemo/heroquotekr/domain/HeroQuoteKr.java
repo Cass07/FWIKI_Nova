@@ -1,4 +1,4 @@
-package wiki.feh.externalrestdemo.heroquote.domain;
+package wiki.feh.externalrestdemo.heroquotekr.domain;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

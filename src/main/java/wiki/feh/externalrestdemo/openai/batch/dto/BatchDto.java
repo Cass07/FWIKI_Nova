@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchInfo;
+import wiki.feh.externalrestdemo.util.json.JsonWriter;
 
 /**
  * @see <a href="https://platform.openai.com/docs/api-reference/batch">Batch API Reference</a>
@@ -57,6 +58,10 @@ public class BatchDto {
             );
         }
 
+        public String getJsonString() {
+            return JsonWriter.of(this).toString();
+        }
+
     }
 
     @Getter
@@ -87,28 +92,4 @@ public class BatchDto {
         private String type;
     }
 
-
-    @Getter
-    @AllArgsConstructor
-    public static class BatchResponse {
-        private String key;
-        private int seq;
-        private String result;
-    }
-
-    @Getter
-    @AllArgsConstructor
-    public static class BatchInfoDto {
-        private int id;
-        private String batchId;
-        private String status;
-
-        public static BatchInfoDto of (BatchInfo batchInfo) {
-            return new BatchInfoDto(
-                    batchInfo.getIdx(),
-                    batchInfo.getBatchId(),
-                    batchInfo.getStatus().name()
-            );
-        }
-    }
 }

@@ -1,10 +1,10 @@
-package wiki.feh.externalrestdemo.heroquote.service;
+package wiki.feh.externalrestdemo.heroquotekr.service;
 
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
-import wiki.feh.externalrestdemo.heroquote.domain.HeroQuoteKr;
-import wiki.feh.externalrestdemo.heroquote.domain.HeroQuoteKrRepository;
+import wiki.feh.externalrestdemo.heroquotekr.domain.HeroQuoteKr;
+import wiki.feh.externalrestdemo.heroquotekr.infra.HeroQuoteKrRepository;
 
 import java.util.List;
 

@@ -4,12 +4,16 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import wiki.feh.externalrestdemo.hero.domain.Hero;
+import wiki.feh.externalrestdemo.heroquote.agg.HeroQuoteAgg;
 import wiki.feh.externalrestdemo.heroquote.domain.HeroQuote;
 
 import java.util.List;
 
+/**
+ * HQ to Json Converter 역할을 수행하는 DTO????
+ */
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
-public class HeroQuoteDto {
+public class OpenAIHeroQuoteDtoV1 {
 
     /**
      * Batch Request의 content dto
@@ -64,6 +68,13 @@ public class HeroQuoteDto {
             return new OpenAiBatchRequest(
                     heroes.stream().map(OpenAIBatchRequestChara::of).toList(),
                     quotes.stream().map(OpenAIBatchRequestContent::of).toList()
+            );
+        }
+
+        public static OpenAiBatchRequest of (Hero hero, HeroQuoteAgg heroQuoteAgg) {
+            return new OpenAiBatchRequest(
+                    List.of(OpenAIBatchRequestChara.of(hero)),
+                    heroQuoteAgg.getHeroQuotes().stream().map(OpenAIBatchRequestContent::of).toList()
             );
         }
 

@@ -1,9 +1,10 @@
-package wiki.feh.externalrestdemo.heroquote.domain;
+package wiki.feh.externalrestdemo.heroquotekr.infra;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Mono;
+import wiki.feh.externalrestdemo.heroquotekr.domain.HeroQuoteKr;
 
 import java.util.List;
 
