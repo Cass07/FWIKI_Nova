@@ -1,4 +1,4 @@
-package wiki.feh.externalrestdemo.util.json;
+package wiki.feh.externalrestdemo.openai.bresult.infra;
 
 import reactor.util.function.Tuple2;
 import wiki.feh.externalrestdemo.openai.bresult.dto.BResultDto;

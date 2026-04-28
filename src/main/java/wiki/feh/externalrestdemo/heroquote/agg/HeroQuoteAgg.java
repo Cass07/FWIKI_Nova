@@ -22,4 +22,8 @@ public class HeroQuoteAgg {
         this.heroId = null;
         this.heroQuotes = List.of();
     }
+
+    public boolean isValid() {
+        return heroId != null && !heroQuotes.isEmpty();
+    }
 }

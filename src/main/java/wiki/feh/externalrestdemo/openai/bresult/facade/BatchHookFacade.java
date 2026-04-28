@@ -11,7 +11,7 @@ import reactor.util.function.Tuples;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchInfo;
 import wiki.feh.externalrestdemo.openai.batch.service.BatchInfoService;
 import wiki.feh.externalrestdemo.openai.bresult.dto.BResultDto;
-import wiki.feh.externalrestdemo.util.json.IBatchResultJsonParse;
+import wiki.feh.externalrestdemo.openai.bresult.infra.IBatchResultJsonParse;
 
 import java.util.List;
 import java.util.Map;

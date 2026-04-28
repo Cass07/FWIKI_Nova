@@ -7,23 +7,19 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-import reactor.function.TupleUtils;
-import reactor.util.function.Tuple3;
-import reactor.util.function.Tuples;
 import wiki.feh.externalrestdemo.hero.domain.Hero;
 import wiki.feh.externalrestdemo.hero.service.HeroService;
 import wiki.feh.externalrestdemo.heroquote.agg.HeroQuoteAgg;
-import wiki.feh.externalrestdemo.heroquote.dto.HeroQuoteDtoV1;
+import wiki.feh.externalrestdemo.heroquote.dto.HeroQuoteDtoConverterV1;
 import wiki.feh.externalrestdemo.heroquote.service.HeroQuoteService;
+import wiki.feh.externalrestdemo.openai.batch.agg.QuoteInfoAgg;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchInfo;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchQuoteInfo;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchStatus;
-import wiki.feh.externalrestdemo.openai.batch.dto.BatchDto;
 import wiki.feh.externalrestdemo.openai.batch.infra.IBatchService;
+import wiki.feh.externalrestdemo.openai.batch.infra.QuoteInfoAggService;
 import wiki.feh.externalrestdemo.openai.batch.service.BatchInfoService;
-import wiki.feh.externalrestdemo.openai.batch.service.BatchQuoteInfoService;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -32,12 +28,15 @@ import java.util.List;
 public class BatchFacade {
 
     private final BatchInfoService batchInfoService;
-    private final BatchQuoteInfoService batchQuoteInfoService;
+    private final QuoteInfoAggService quoteInfoAggService;
     private final HeroQuoteService heroQuoteService;
     private final HeroService heroService;
 
     @Qualifier("OpenAIBatchService")
     private final IBatchService openAIBatchService;
+
+    @Qualifier("HeroQuoteDtoConverterV1")
+    private final HeroQuoteDtoConverterV1 heroQuoteDtoConverterV1;
 
     public Mono<BatchInfo> asyncTest() {
         BatchInfo batchInfo = new BatchInfo().updateStatus(BatchStatus.PENDING);
@@ -80,7 +79,7 @@ public class BatchFacade {
 
         return batchInfoService.saveBatchInfo(batchInfo)
                 .flatMap(savedInfo ->
-                    requestHeroQuoteBatchJob(heroIds, savedInfo)
+                        requestHeroQuoteBatchJob(heroIds, savedInfo)
                 )
                 .doOnError(error -> log.error("Error in batch job: {}", error.getMessage()));
     }
@@ -91,33 +90,28 @@ public class BatchFacade {
         log.debug("Preparing hero quote batch info for batch id: {}", batchInfoId);
 
         return prepareHeroQuoteBatchInfo(heroIds, batchInfoId)
-                .map(TupleUtils.function((hero, heroQuoteAgg, batchQuoteInfo) -> {
-                    // quote list와 hero 객체로부터 dto 객체 생성해서 list로 묶어서 넘기고
-                    return Tuples.of(
-                            hero,
-                            new HeroQuoteDtoV1(hero, heroQuoteAgg),
-                            batchQuoteInfo
-                    );
-                }))
-                // quote 리스트를 json string list로 묶고 batchQuoteInfo 객체들도 묶어서 tuple2<list, list>로 리턴
-                .collect(() -> Tuples.<List<String>, List<BatchQuoteInfo>>of(new ArrayList<>(), new ArrayList<>()),
-                        (acc, tuple) -> {
-                            String batchRequestLineJson = tuple.getT2().generateJsonBody();
-                            BatchDto.BatchRequestLine batchRequestLine = new BatchDto.BatchRequestLine(
-                                    tuple.getT1().getId(),
-                                    batchRequestLineJson
-                            );
-                            acc.getT1().add(batchRequestLine.getJsonString());
-                            acc.getT2().add(tuple.getT3());
-                        })
-                // batchQuoteInfo 리스트를 batch insert
-                .flatMap(TupleUtils.function((batchRequestLineList, batchQuoteInfoList) ->
-                        batchQuoteInfoService.saveAllBatchQuoteInfoList(batchQuoteInfoList)
-                                .thenReturn(batchRequestLineList)
-                ))
-                // json string 리스트로 외부 api 요청
-                .flatMap(openAIBatchService::callRequestBatchApi)
-                // 응답을 받아서 batchInfo 업데이트
+                // isQuoteInfoAggValid로 필터링하고,필터링된 객체는 로깅하기
+                .filter(quoteInfoAgg -> {
+                    boolean isValid = quoteInfoAgg.isValid();
+                    if (!isValid) {
+                        log.warn("Invalid QuoteInfoAgg for hero id {}: missing hero or quote data",
+                                quoteInfoAgg.getHero() != null ? quoteInfoAgg.getHero().getId() : "null");
+                    }
+                    return isValid;
+                })
+                // batch 처리를 위해 list로 묶음
+                .collectList()
+                // BatchQuoteInfo 리스트 저장 먼저
+                .flatMap(quoteInfoAggs -> quoteInfoAggService.saveAllBatchQuoteInfoList(quoteInfoAggs)
+                        .thenReturn(quoteInfoAggs))
+                // json String 리스트로 모아서 외부 API 요청
+                .flatMap(quoteInfoAggs -> {
+                    // quoteInfoAggs 리스트를 json body string 리스트로 변환
+                    List<String> batchRequestLineJsonList = quoteInfoAggs.stream()
+                            .map(heroQuoteDtoConverterV1::toJsonString)
+                            .toList();
+                    return openAIBatchService.callRequestBatchApi(batchRequestLineJsonList);
+                })
                 .flatMap(batchId -> batchInfoService.updateBatchInfoRequested(savedInfo, batchId))
                 .onErrorResume(error -> {
                     log.error("Error during batch processing for batch id {}: {}", batchInfoId, error.getMessage());
@@ -130,15 +124,14 @@ public class BatchFacade {
      * flux 플로우
      * 1. hero id list로 hero 객체들 조회
      * 2. hero id list로 hero quote list 조회
-     * 3. hero id별로 묶어서 hero, quote list, batchQuoteInfo 객체 생성
+     * 3. hero id별로 묶어서 QuoteInfoAgg 객체로 매핑
      */
-    private Flux<Tuple3<Hero, HeroQuoteAgg, BatchQuoteInfo>> prepareHeroQuoteBatchInfo(List<String> heroIds, int batchInfoId) {
+    private Flux<QuoteInfoAgg> prepareHeroQuoteBatchInfo(List<String> heroIds, int batchInfoId) {
         return heroQuoteService.getHeroQuoteAggByIds(heroIds)
-                // 튜플을 Map으로 변환해서 검색 성능 개선
+                // Map으로 변환해서 검색 성능 개선
                 .collectMap(HeroQuoteAgg::getHeroId)
-                // 조회한 Hero 객체별로 튜플 매핑
                 .flatMapMany(idAndQuoteAggTuple -> heroService.getHeroesByIds(heroIds)
-                        .map(heroEntity -> buildHeroQuoteBatchInfoTuple(
+                        .map(heroEntity -> buildQuoteInfoAgg(
                                 heroEntity,
                                 idAndQuoteAggTuple.getOrDefault(heroEntity.getId(), new HeroQuoteAgg()),
                                 batchInfoId
@@ -147,16 +140,16 @@ public class BatchFacade {
     }
 
     /**
-     * hero 객체 flux를 생성해서 quote list에서 매핑하고 batchQuoteInfo 객체를 생성해서 튜플로 묶기
+     * hero 객체 flux를 생성해서 quote list에서 매핑하고 batchQuoteInfo 객체를 생성
      */
-    private Tuple3<Hero, HeroQuoteAgg, BatchQuoteInfo> buildHeroQuoteBatchInfoTuple(Hero hero, HeroQuoteAgg heroQuoteAgg, int batchInfoId) {
+    private QuoteInfoAgg buildQuoteInfoAgg(Hero hero, HeroQuoteAgg heroQuoteAgg, int batchInfoId) {
         BatchQuoteInfo batchQuoteInfo = BatchQuoteInfo.builder()
                 .batchInfoId(batchInfoId)
                 .heroId(hero.getId())
                 .status(BatchStatus.PENDING)
                 .createdAt(java.time.LocalDateTime.now())
                 .build();
-        return Tuples.of(hero, heroQuoteAgg, batchQuoteInfo);
+        return new QuoteInfoAgg(hero, heroQuoteAgg, batchQuoteInfo);
     }
 
 }

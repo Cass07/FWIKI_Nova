@@ -1,4 +1,4 @@
-package wiki.feh.externalrestdemo.util.json;
+package wiki.feh.externalrestdemo.openai.bresult.infra;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
