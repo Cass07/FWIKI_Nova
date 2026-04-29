@@ -16,6 +16,7 @@ import wiki.feh.externalrestdemo.openai.bresult.infra.IBatchResultService;
 public class BResultController {
     private final BResultFacade bResultFacade;
     private final BatchHookFacade batchHookFacade;
+
     @Qualifier("OpenAIBatchResultService")
     private final IBatchResultService batchResultService;
 

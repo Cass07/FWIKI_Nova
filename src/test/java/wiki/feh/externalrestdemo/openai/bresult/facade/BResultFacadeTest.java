@@ -16,10 +16,11 @@ import wiki.feh.externalrestdemo.heroquotekr.service.HeroQuoteKrService;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchQuoteInfo;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchStatus;
 import wiki.feh.externalrestdemo.openai.batch.service.BatchQuoteInfoService;
-import wiki.feh.externalrestdemo.openai.bresult.dto.BResultDto;
+import wiki.feh.externalrestdemo.openai.bresult.dto.ApiResultV1;
 import wiki.feh.externalrestdemo.util.NamedLockManager;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.*;
@@ -57,18 +58,18 @@ class BResultFacadeTest {
         BatchQuoteInfo batchQuoteInfoCompleted = new BatchQuoteInfo(1, 1, BatchStatus.COMPLETED, null, heroId);
 
 
-        List<BResultDto.ApiResult> apiResults = List.of(
-                new BResultDto.ApiResult("Home", 1, "home test1"),
-                new BResultDto.ApiResult("Home", 2, "home test2"),
-                new BResultDto.ApiResult("Level", 1, "level test1"),
-                new BResultDto.ApiResult("Level", 2, "level test2")
+        List<ApiResultV1> apiResults = List.of(
+                new ApiResultV1("Home", 1, "home test1"),
+                new ApiResultV1("Home", 2, "home test2"),
+                new ApiResultV1("Level", 1, "level test1"),
+                new ApiResultV1("Level", 2, "level test2")
         );
 
         // executeWithNamedLock을 모킹해서 operation인 두 번째 메소드를 리턴하도록 함
-        doAnswer(invocation -> invocation.getArgument(1)).when(namedLockManager).executeWithNamedLock(
-                eq("hquote_" + heroId),
-                any()
-        );
+        doAnswer(invocation -> {
+            Supplier<Mono<Void>> operation = invocation.getArgument(1);
+            return operation.get(); // Supplier를 실행해서 Mono를 꺼내야 함
+        }).when(namedLockManager).executeWithNamedLock(eq("hquote_" + heroId), any());
 
         doReturn(Mono.empty())
                 .when(heroQuoteKrService)
@@ -87,6 +88,7 @@ class BResultFacadeTest {
         // then
         StepVerifier.create(bResultFacade.lockHeroIdAndInsertHeroQuoteKr(batchQuoteInfo, apiResults))
                 .expectSubscription()
+                .expectNextCount(1)
                 .verifyComplete();
 
         verify(heroQuoteKrService).batchSaveHeroQuoteKrList(heroQuoteKrListCaptor.capture());
@@ -97,7 +99,7 @@ class BResultFacadeTest {
 
         assertEquals(65, firstHeroQuoteKr.getEditorId());
         assertEquals(6, firstHeroQuoteKr.getVersion());
-        assertEquals(1, firstHeroQuoteKr.getStatus());
+        assertEquals(2, firstHeroQuoteKr.getStatus());
         assertEquals("home test1", firstHeroQuoteKr.getText());
         assertEquals(heroId, firstHeroQuoteKr.getId());
 

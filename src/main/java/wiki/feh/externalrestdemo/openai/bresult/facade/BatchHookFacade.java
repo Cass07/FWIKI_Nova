@@ -10,7 +10,8 @@ import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchInfo;
 import wiki.feh.externalrestdemo.openai.batch.service.BatchInfoService;
-import wiki.feh.externalrestdemo.openai.bresult.dto.BResultDto;
+import wiki.feh.externalrestdemo.openai.bresult.dto.ApiResultV1;
+import wiki.feh.externalrestdemo.openai.bresult.dto.IApiResult;
 import wiki.feh.externalrestdemo.openai.bresult.infra.IBatchResultJsonParse;
 
 import java.util.List;
@@ -25,6 +26,8 @@ public class BatchHookFacade {
 
     @Qualifier("BatchResultJsonParseV1")
     private final IBatchResultJsonParse batchResultJsonParse;
+
+    private final Class <? extends IApiResult> API_RESULT_PARSE_CLASS = ApiResultV1.class;
 
     //webhook에서 수신한 데이터를 가공하는 facade
 
@@ -41,7 +44,7 @@ public class BatchHookFacade {
 
     // batch id, jsonl String list를 받아서 map of `hero-id` & `list of BResultDto.ApiResult` 반환
     // 에러 여부에 관계없이 batchId와 jsonlList를 로깅
-    public Mono<Tuple2<BatchInfo, Map<String, List<BResultDto.ApiResult>>>> processWebhookData(BatchInfo batchInfo, List<String> jsonlList) {
+    public Mono<Tuple2<BatchInfo, Map<String, List<? extends IApiResult>>>> processWebhookData(BatchInfo batchInfo, List<String> jsonlList) {
         return parseResponseJsonList(jsonlList)
                 .map(apiResultMap -> Tuples.of(batchInfo, apiResultMap));
     }
@@ -51,7 +54,7 @@ public class BatchHookFacade {
      * @param jsonlList
      * @return
      */
-    public Mono<Map<String, List<BResultDto.ApiResult>>> parseResponseJsonList(List<String> jsonlList) {
+    public Mono<Map<String, List<? extends IApiResult>>> parseResponseJsonList(List<String> jsonlList) {
         return Flux.fromIterable(jsonlList)
                 .mapNotNull(jsonString -> {
                     try {
@@ -61,7 +64,7 @@ public class BatchHookFacade {
                             return null;
                         }
 
-                        List<BResultDto.ApiResult> apiResultList = batchResultJsonParse.parseResultStringToApiResultList(parsed.getT2());
+                        List<? extends IApiResult> apiResultList = batchResultJsonParse.parseResultStringToApiResultList(parsed.getT2(), API_RESULT_PARSE_CLASS);
                         if (apiResultList == null) {
                             log.error("Parsed Result List is null for heroId {}: {}", parsed.getT1(), parsed.getT2());
                             return null;

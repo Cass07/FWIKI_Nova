@@ -13,14 +13,15 @@ import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchInfo;
 import wiki.feh.externalrestdemo.openai.batch.service.BatchInfoService;
-import wiki.feh.externalrestdemo.openai.bresult.dto.BResultDto;
+import wiki.feh.externalrestdemo.openai.bresult.dto.ApiResultV1;
+import wiki.feh.externalrestdemo.openai.bresult.dto.IApiResult;
 import wiki.feh.externalrestdemo.openai.bresult.infra.IBatchResultJsonParse;
 
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 
@@ -126,12 +127,12 @@ class BatchHookFacadeTest {
                 .when(batchResultJsonParse).parseResponseJson(jsonlList.get(1));
 
         doReturn(List.of(
-                new BResultDto.ApiResult("Home", 1, "home test1"),
-                new BResultDto.ApiResult("Level", 1, "level test1")
-        )).when(batchResultJsonParse).parseResultStringToApiResultList(anyString());
+                new ApiResultV1("Home", 1, "home test1"),
+                new ApiResultV1("Level", 1, "level test1")
+        )).when(batchResultJsonParse).parseResultStringToApiResultList(anyString(), any());
 
         // when
-        Mono<Tuple2<BatchInfo, Map<String, List<BResultDto.ApiResult>>>> resultMono =
+        Mono<Tuple2<BatchInfo, Map<String, List<? extends IApiResult>>>> resultMono =
                 batchHookFacade.processWebhookData(batchInfo, jsonlList);
 
         // then
@@ -170,12 +171,12 @@ class BatchHookFacadeTest {
                 .when(batchResultJsonParse).parseResponseJson(jsonlList.get(1));
 
         doReturn(List.of(
-                new BResultDto.ApiResult("Home", 1, "home test2"),
-                new BResultDto.ApiResult("Level", 1, "level test2")
-        )).when(batchResultJsonParse).parseResultStringToApiResultList(anyString());
+                new ApiResultV1("Home", 1, "home test2"),
+                new ApiResultV1("Level", 1, "level test2")
+        )).when(batchResultJsonParse).parseResultStringToApiResultList(anyString(), any());
 
         // when
-        Mono<Tuple2<BatchInfo, Map<String, List<BResultDto.ApiResult>>>> resultMono =
+        Mono<Tuple2<BatchInfo, Map<String, List<? extends IApiResult>>>> resultMono =
                 batchHookFacade.processWebhookData(batchInfo, jsonlList);
 
         // then
@@ -213,15 +214,15 @@ class BatchHookFacadeTest {
                 .when(batchResultJsonParse).parseResponseJson(jsonlList.get(1));
 
         doReturn(List.of(
-                new BResultDto.ApiResult("Home", 1, "home test1"),
-                new BResultDto.ApiResult("Level", 1, "level test1")
-        )).when(batchResultJsonParse).parseResultStringToApiResultList("successful data");
+                new ApiResultV1("Home", 1, "home test1"),
+                new ApiResultV1("Level", 1, "level test1")
+        )).when(batchResultJsonParse).parseResultStringToApiResultList(eq("successful data"), any());
 
         doThrow(new RuntimeException("Parsing error"))
-                .when(batchResultJsonParse).parseResultStringToApiResultList("error data");
+                .when(batchResultJsonParse).parseResultStringToApiResultList(eq("error data"), any());
 
         // when
-        Mono<Tuple2<BatchInfo, Map<String, List<BResultDto.ApiResult>>>> resultMono =
+        Mono<Tuple2<BatchInfo, Map<String, List<? extends IApiResult>>>> resultMono =
                 batchHookFacade.processWebhookData(batchInfo, jsonlList);
 
         // then

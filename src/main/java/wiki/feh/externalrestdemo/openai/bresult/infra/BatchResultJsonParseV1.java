@@ -9,7 +9,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
-import wiki.feh.externalrestdemo.openai.bresult.dto.BResultDto;
+import wiki.feh.externalrestdemo.openai.bresult.dto.IApiResult;
 
 import java.util.List;
 
@@ -21,9 +21,14 @@ public class BatchResultJsonParseV1 implements IBatchResultJsonParse {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public List<BResultDto.ApiResult> parseResultStringToApiResultList(String resultString) {
+    public <T extends IApiResult> List<T> parseResultStringToApiResultList(String resultString, Class<T> resultType) {
         try {
-            List<BResultDto.ApiResult> apiResultList = objectMapper.readValue(
+            if(resultString == null || resultString.isEmpty()) {
+                log.error("Result string is null or empty");
+                return null;
+            }
+
+            List<T> apiResultList = objectMapper.readValue(
                     resultString,
                     new TypeReference<>() {
                     });

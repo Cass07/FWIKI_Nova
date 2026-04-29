@@ -6,6 +6,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.context.ActiveProfiles;
+import wiki.feh.externalrestdemo.openai.bresult.dto.ApiResultV1;
 import wiki.feh.externalrestdemo.openai.bresult.infra.BatchResultJsonParseV1;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -23,7 +24,7 @@ class BatchResultJsonParseV1Test {
         String emptyListJson = "[]";
 
         // when
-        var result = batchResultJsonParseV1.parseResultStringToApiResultList(emptyListJson);
+        var result = batchResultJsonParseV1.parseResultStringToApiResultList(emptyListJson, ApiResultV1.class);
 
         // then
         assertNull(result);
@@ -36,7 +37,7 @@ class BatchResultJsonParseV1Test {
         String invalidJson = "{ this is not valid JSON }";
 
         // when
-        var result = batchResultJsonParseV1.parseResultStringToApiResultList(invalidJson);
+        var result = batchResultJsonParseV1.parseResultStringToApiResultList(invalidJson, ApiResultV1.class);
 
         // then
         assertNull(result);
@@ -57,7 +58,7 @@ class BatchResultJsonParseV1Test {
                 """;
 
         // when
-        var result = batchResultJsonParseV1.parseResultStringToApiResultList(invalidApiResultJson);
+        var result = batchResultJsonParseV1.parseResultStringToApiResultList(invalidApiResultJson, ApiResultV1.class);
 
         // then
         assertNull(result);
@@ -67,7 +68,7 @@ class BatchResultJsonParseV1Test {
     @Test
     void parseResultStringToApiResultList_NullInput() {
         // when
-        var result = batchResultJsonParseV1.parseResultStringToApiResultList(null);
+        var result = batchResultJsonParseV1.parseResultStringToApiResultList(null, ApiResultV1.class);
 
         // then
         assertNull(result);
@@ -93,7 +94,7 @@ class BatchResultJsonParseV1Test {
                 """;
 
         // when
-        var result = batchResultJsonParseV1.parseResultStringToApiResultList(validJson);
+        var result = batchResultJsonParseV1.parseResultStringToApiResultList(validJson, ApiResultV1.class);
 
         // then
         assertNotNull(result);

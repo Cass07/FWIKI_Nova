@@ -12,7 +12,7 @@ import wiki.feh.externalrestdemo.openai.batch.domain.BatchQuoteInfo;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchStatus;
 import wiki.feh.externalrestdemo.openai.batch.service.BatchInfoService;
 import wiki.feh.externalrestdemo.openai.batch.service.BatchQuoteInfoService;
-import wiki.feh.externalrestdemo.openai.bresult.dto.BResultDto;
+import wiki.feh.externalrestdemo.openai.bresult.dto.IApiResult;
 import wiki.feh.externalrestdemo.util.NamedLockManager;
 
 import java.util.List;
@@ -59,7 +59,7 @@ public class BResultFacade {
      * 그 후, 각 BatchQuoteInfo에 대해 processAndInsertHeroQuoteKr 실행
      * 모두 종료되면 batchInfo 상태를 completed로 바꿈
      */
-    public Mono<BatchInfo> insertApiResultToHeroQuoteKr(BatchInfo batchInfo, Map<String, List<BResultDto.ApiResult>> resultList) {
+    public Mono<BatchInfo> insertApiResultToHeroQuoteKr(BatchInfo batchInfo, Map<String, List<? extends IApiResult>> resultList) {
         return Mono.just(batchInfo)
                 .flatMap(bi -> {
                     if (!bi.getStatus().equals(BatchStatus.REQUESTED)) {
@@ -98,7 +98,7 @@ public class BResultFacade {
      * @param results        apiResult list (OpenAI response를 parsing한 것)
      * @return Mono<BatchQuoteInfo>
      */
-    public Mono<BatchQuoteInfo> lockHeroIdAndInsertHeroQuoteKr(BatchQuoteInfo batchQuoteInfo, List<BResultDto.ApiResult> results) {
+    public Mono<BatchQuoteInfo> lockHeroIdAndInsertHeroQuoteKr(BatchQuoteInfo batchQuoteInfo, List<? extends IApiResult> results) {
         String lockKey = HERO_QUOTE_KR_LOCK_PREFIX + batchQuoteInfo.getHeroId();
         return namedLockManager.executeWithNamedLock(lockKey,
                         () -> insertHeroQuoteKr(batchQuoteInfo, results)
@@ -113,7 +113,7 @@ public class BResultFacade {
      * @param results        apiResult list (OpenAI response를 parsing한 것)
      * @return void
      */
-    public Mono<Void> insertHeroQuoteKr(BatchQuoteInfo batchQuoteInfo, List<BResultDto.ApiResult> results) {
+    public Mono<Void> insertHeroQuoteKr(BatchQuoteInfo batchQuoteInfo, List<? extends IApiResult> results) {
         String heroId = batchQuoteInfo.getHeroId();
         return heroQuoteKrService.getLatestIndexForHeroQuoteKr(heroId)
                 .flatMap(index -> {
@@ -138,14 +138,9 @@ public class BResultFacade {
      * @param results  apiResult list (OpenAI response를 parsing한 것)
      * @return HeroQuoteKr list Mono
      */
-    private Mono<List<HeroQuoteKr>> convertResultToHeroQuoteKr(String heroId, int newIndex, int status, List<BResultDto.ApiResult> results) {
+    private Mono<List<HeroQuoteKr>> convertResultToHeroQuoteKr(String heroId, int newIndex, int status, List<? extends IApiResult> results) {
         return Flux.fromIterable(results)
-                .map(apiResult -> new HeroQuoteKr(
-                        apiResult,
-                        heroId,
-                        newIndex,
-                        status
-                ))
+                .map(apiResult -> apiResult.toHeroQuoteKr(heroId, newIndex, status))
                 .collectList();
     }
 
