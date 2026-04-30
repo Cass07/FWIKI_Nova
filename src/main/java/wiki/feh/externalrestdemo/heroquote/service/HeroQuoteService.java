@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
+import wiki.feh.externalrestdemo.heroquote.agg.HeroQuoteAgg;
 import wiki.feh.externalrestdemo.heroquote.domain.HeroQuote;
 import wiki.feh.externalrestdemo.heroquote.domain.HeroQuoteRepository;
 import wiki.feh.externalrestdemo.heroquote.domain.QuoteLang;
@@ -29,6 +30,17 @@ public class HeroQuoteService {
                 // id별로 묶기
                 .flatMapMany(quotes -> Flux.fromIterable(ids.stream()
                         .map(id -> Tuples.of(id, quotes.stream()
+                                .filter(quote -> quote.getId().equals(id))
+                                .toList()))
+                        .toList()));
+    }
+
+    public Flux<HeroQuoteAgg> getHeroQuoteAggByIds(List<String> ids) {
+        return heroQuoteRepository.findAllByIdInAndLangOrderById(ids, DEFAULT_LANG)
+                .collectList()
+                // id별로 묶기
+                .flatMapMany(quotes -> Flux.fromIterable(ids.stream()
+                        .map(id -> new HeroQuoteAgg(id, quotes.stream()
                                 .filter(quote -> quote.getId().equals(id))
                                 .toList()))
                         .toList()));

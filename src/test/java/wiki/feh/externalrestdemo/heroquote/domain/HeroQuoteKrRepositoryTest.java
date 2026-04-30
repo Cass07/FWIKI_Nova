@@ -7,6 +7,9 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.data.r2dbc.DataR2dbcTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
+import wiki.feh.externalrestdemo.heroquotekr.domain.HeroQuoteKr;
+import wiki.feh.externalrestdemo.heroquotekr.infra.HeroQuoteKrCustomRepository;
+import wiki.feh.externalrestdemo.heroquotekr.infra.HeroQuoteKrRepository;
 import wiki.feh.externalrestdemo.util.config.R2dbcConfig;
 
 import java.util.List;

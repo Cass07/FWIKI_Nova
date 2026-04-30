@@ -1,6 +1,7 @@
-package wiki.feh.externalrestdemo.heroquote.domain;
+package wiki.feh.externalrestdemo.heroquotekr.infra;
 
 import reactor.core.publisher.Mono;
+import wiki.feh.externalrestdemo.heroquotekr.domain.HeroQuoteKr;
 
 import java.util.List;
 

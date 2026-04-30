@@ -8,7 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
-import wiki.feh.externalrestdemo.openai.batch.facade.BatchFacade;
+import wiki.feh.externalrestdemo.openai.batch.controller.BatchController;
 import wiki.feh.externalrestdemo.openai.bresult.controller.BResultController;
 
 import java.util.List;
@@ -17,13 +17,12 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 public class SQSListeners {
-
-    private final BatchFacade batchFacade;
+    private final BatchController batchController;
     private final SQSService sqsService;
     private final BResultController bResultController;
 
     @SqsListener(value = "TsHeroId", maxMessagesPerPoll = "10", factory = "sqsMessageListenerContainerFactory")
-    public void listenToSQSMessages(List<Message<String>> messages, BatchAcknowledgement<String> acknowledgement) {
+    public void listenToSQSTsHeroMessages(List<Message<String>> messages, BatchAcknowledgement<String> acknowledgement) {
         log.info("Received {} messages from SQS listener", messages.size());
         for (Message<String> message : messages) {
             log.info("Received message from SQS listener: {}", message.getPayload());
@@ -36,7 +35,7 @@ public class SQSListeners {
                 .map(Message::getPayload)
                 .toList();
 
-        batchFacade.requestBatchJobListener(payloads)
+        batchController.requestBatchJob(payloads)
                 .flatMap(batchInfo -> sqsService.sendMessageToSQS(batchInfo.getBatchId(), "fehwiki-tran-batchid")
                         .doOnSuccess(_ -> log.info("Sent batch-id {} to SQS", batchInfo.getBatchId()))
                         .thenReturn(batchInfo))
@@ -56,7 +55,7 @@ public class SQSListeners {
         log.info("Received batch-id message from SQS listener: {}", batchId);
 
         // 메시지 처리에 실패하면 Exception을 발생시켜서 메시지가 삭제되지 않도록 함
-        bResultController.testWebhook(batchId)
+        bResultController.updateTranslateData(batchId)
                 .then(Mono.defer(() -> Mono.fromFuture(acknowledgement.acknowledgeAsync())
                         .then()))
                 .doOnSuccess(_ -> log.info("Processed webhook for batch-id: {}", batchId))

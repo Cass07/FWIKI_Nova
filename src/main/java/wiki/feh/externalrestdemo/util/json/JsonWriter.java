@@ -17,4 +17,9 @@ public class JsonWriter {
             throw new RuntimeException("Failed to convert text to JSON string", e);
         }
     }
+
+    @Override
+    public String toString() {
+        return text;
+    }
 }

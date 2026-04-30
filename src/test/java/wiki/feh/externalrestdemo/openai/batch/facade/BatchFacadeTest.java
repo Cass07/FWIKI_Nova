@@ -3,10 +3,7 @@ package wiki.feh.externalrestdemo.openai.batch.facade;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.context.ActiveProfiles;
 import reactor.core.publisher.Flux;
@@ -18,10 +15,10 @@ import wiki.feh.externalrestdemo.hero.service.HeroService;
 import wiki.feh.externalrestdemo.heroquote.domain.HeroQuote;
 import wiki.feh.externalrestdemo.heroquote.domain.QuoteLang;
 import wiki.feh.externalrestdemo.heroquote.service.HeroQuoteService;
-import wiki.feh.externalrestdemo.openai.api.service.OpenAPIService;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchInfo;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchQuoteInfo;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchStatus;
+import wiki.feh.externalrestdemo.openai.batch.infra.IBatchService;
 import wiki.feh.externalrestdemo.openai.batch.service.BatchInfoService;
 import wiki.feh.externalrestdemo.openai.batch.service.BatchQuoteInfoService;
 
@@ -37,6 +34,7 @@ import static org.mockito.Mockito.verify;
 @ActiveProfiles("test")
 @ExtendWith(MockitoExtension.class)
 class BatchFacadeTest {
+    @Spy
     @InjectMocks
     private BatchFacade batchFacade;
 
@@ -53,7 +51,7 @@ class BatchFacadeTest {
     private HeroService heroService;
 
     @Mock
-    private OpenAPIService openAPIService;
+    private IBatchService openAPIService;
 
     @Captor
     private ArgumentCaptor<List<BatchQuoteInfo>> batchQuoteInfoListCaptor;
@@ -132,6 +130,8 @@ class BatchFacadeTest {
 
         doReturn(Mono.just(batchInfo))
                 .when(batchInfoService).saveBatchInfo(any(BatchInfo.class));
+        doReturn(Mono.just(batchInfo))
+                .when(batchFacade).requestHeroQuoteBatchJob(anyList(), any(BatchInfo.class));
 
         // when & then
         StepVerifier
@@ -145,7 +145,7 @@ class BatchFacadeTest {
 
     @DisplayName("HeroQuoteBatchJob 테스트")
     @Test
-    public void testHeroQuoteBatchJob_endToEnd_captor() {
+    public void testRequestHeroQuoteBatchJob_endToEnd_captor() {
         // given
         String hero1 = "hero1";
         String hero2 = "hero2";
@@ -184,7 +184,7 @@ class BatchFacadeTest {
                 .when(batchInfoService).updateBatchInfoRequested(any(BatchInfo.class), eq(batchApiResponseId));
 
         // when, then
-        StepVerifier.create(batchFacade.heroQuoteBatchJob(heroIds, batchInfo))
+        StepVerifier.create(batchFacade.requestHeroQuoteBatchJob(heroIds, batchInfo))
                 .expectSubscription()
                 .expectNextMatches(bi -> bi.getIdx() == batchInfo.getIdx() && bi.getStatus() == BatchStatus.REQUESTED && batchApiResponseId.equals(bi.getBatchId()))
                 .verifyComplete();

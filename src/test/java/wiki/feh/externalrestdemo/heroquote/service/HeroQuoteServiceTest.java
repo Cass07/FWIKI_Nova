@@ -50,4 +50,29 @@ class HeroQuoteServiceTest {
         assertEquals(1, result.get(1).getT2().size()); // "test2" id에 해당하는 데이터 1개
     }
 
+    @DisplayName("findHeroQuoteAggByIds")
+    @Test
+    void findHeroQuoteAggByIds() {
+        // given
+        HeroQuote heroQuote1 = new HeroQuote(1, "test", "quote1", 1, "author1", QuoteLang.JP);
+        HeroQuote heroQuote2 = new HeroQuote(2, "test", "quote2", 2, "author2", QuoteLang.JP);
+        HeroQuote heroQuote3 = new HeroQuote(3, "test2", "quote1", 1, "author1", QuoteLang.JP);
+
+        List<String> ids = List.of("test", "test2");
+        QuoteLang lang = QuoteLang.JP;
+
+        doReturn(Flux.just(heroQuote1, heroQuote2, heroQuote3))
+                .when(heroQuoteRepository).findAllByIdInAndLangOrderById(ids, lang);
+
+        // when
+        var result = heroQuoteService.getHeroQuoteAggByIds(ids).collectList().block();
+
+        // then
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        assertEquals("test", result.get(0).getHeroId());
+        assertEquals(2, result.get(0).getHeroQuotes().size()); // "test" id에 해당하는 데이터 2개
+        assertEquals("test2", result.get(1).getHeroId());
+        assertEquals(1, result.get(1).getHeroQuotes().size()); // "test2" id에 해당하는 데이터 1개
+    }
 }

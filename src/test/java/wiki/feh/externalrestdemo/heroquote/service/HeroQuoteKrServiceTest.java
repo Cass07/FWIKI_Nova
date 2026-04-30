@@ -8,8 +8,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.context.ActiveProfiles;
 import reactor.core.publisher.Mono;
-import wiki.feh.externalrestdemo.heroquote.domain.HeroQuoteKr;
-import wiki.feh.externalrestdemo.heroquote.domain.HeroQuoteKrRepository;
+import wiki.feh.externalrestdemo.heroquotekr.domain.HeroQuoteKr;
+import wiki.feh.externalrestdemo.heroquotekr.infra.HeroQuoteKrRepository;
+import wiki.feh.externalrestdemo.heroquotekr.service.HeroQuoteKrService;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.doReturn;
