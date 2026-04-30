@@ -2,9 +2,13 @@ package wiki.feh.externalrestdemo.openai.bresult.facade;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.function.TupleUtils;
+import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
 import wiki.feh.externalrestdemo.heroquotekr.domain.HeroQuoteKr;
 import wiki.feh.externalrestdemo.heroquotekr.service.HeroQuoteKrService;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchInfo;
@@ -12,21 +16,59 @@ import wiki.feh.externalrestdemo.openai.batch.domain.BatchQuoteInfo;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchStatus;
 import wiki.feh.externalrestdemo.openai.batch.service.BatchInfoService;
 import wiki.feh.externalrestdemo.openai.batch.service.BatchQuoteInfoService;
+import wiki.feh.externalrestdemo.openai.bresult.dto.ApiResultV1;
 import wiki.feh.externalrestdemo.openai.bresult.dto.IApiResult;
+import wiki.feh.externalrestdemo.openai.bresult.infra.IBatchResultJsonParse;
+import wiki.feh.externalrestdemo.openai.bresult.infra.IBatchResultService;
 import wiki.feh.externalrestdemo.util.NamedLockManager;
 
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 데이터를 받아서 가공해서 DB에 저장하는 역할
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class BResultFacade {
     private final String HERO_QUOTE_KR_LOCK_PREFIX = "hquote_";
-    private final HeroQuoteKrService heroQuoteKrService;
+    private final Class <? extends IApiResult> API_RESULT_PARSE_CLASS = ApiResultV1.class;
+
     private final BatchQuoteInfoService batchQuoteInfoService;
-    private final NamedLockManager namedLockManager;
     private final BatchInfoService batchInfoService;
+    private final HeroQuoteKrService heroQuoteKrService;
+
+    @Qualifier("OpenAIBatchResultService")
+    private final IBatchResultService batchResultService;
+
+    private final NamedLockManager namedLockManager;
+
+    @Qualifier("BatchResultJsonParseV1")
+    private final IBatchResultJsonParse batchResultJsonParse;
+
+
+    // 상위 레이어에서 호출할 최종 메소드
+    public Mono<BatchInfo> updateTranslateDataFromBatchId(String batchId) {
+        return this.getUpdatableBatchInfoFromBatchId(batchId)
+                .flatMap(batchInfo -> {
+                    log.info("Verified batchInfo: {}", batchInfo.getBatchId());
+                    // batchId로 결과 파일 ID 조회
+                    String bId = batchInfo.getBatchId();
+                    return batchResultService.getJsonListFromBatchId(bId)
+                            // 검증된 batchInfo와 jsonList를 parsing
+                            // parsing은 기존에 정의한 jsonl 구조에 따라 가기 때문에 API와는 독립적으로 설계
+                            .flatMap(jsonList ->
+                                    this.makeApiResultMapFromBatchInfoAndJsonList(batchInfo, jsonList)
+                            )
+                            // parsing된 데이터를 바탕으로 실제 작업 수행
+                            .flatMap(TupleUtils.function((batchInfo_, apiResultMap) -> {
+                                log.info("batchInfo status: {}", batchInfo_.getStatus());
+                                return this.insertApiResultToHeroQuoteKr(batchInfo_, apiResultMap);
+                            }));
+                });
+    }
+
 
     /*
      * flow
@@ -144,5 +186,52 @@ public class BResultFacade {
                 .collectList();
     }
 
+    /**
+     * batch id로 BatchInfo 조회 후, 상태가 REQUESTED인지 검증
+     * @param batchId
+     * @return
+     */
+    public Mono<BatchInfo> getUpdatableBatchInfoFromBatchId(String batchId) {
+        return batchInfoService.getBatchInfoByBatchId(batchId)
+                .flatMap(batchInfo -> Mono.just(batchInfo.verifyUpdatable()))
+                .switchIfEmpty(Mono.error(new RuntimeException("No BatchInfo found for batchId: " + batchId)));
+    }
+
+    // batchInfo, jsonl String list를 받아서 map of `hero-id` & `list of BResultDto.ApiResult` 반환
+    // 에러 여부에 관계없이 batchId와 jsonlList를 로깅
+    public Mono<Tuple2<BatchInfo, Map<String, List<? extends IApiResult>>>> makeApiResultMapFromBatchInfoAndJsonList(BatchInfo batchInfo, List<String> jsonlList) {
+        return parseResponseJsonList(jsonlList)
+                .map(apiResultMap -> Tuples.of(batchInfo, apiResultMap));
+    }
+
+    /**
+     * jsonl string list를 받아서 hero id, ApiResultList Map으로 반환
+     * @param jsonlList
+     * @return
+     */
+    private Mono<Map<String, List<? extends IApiResult>>> parseResponseJsonList(List<String> jsonlList) {
+        return Flux.fromIterable(jsonlList)
+                .mapNotNull(jsonString -> {
+                    try {
+                        Tuple2<String, String> parsed = batchResultJsonParse.parseResponseJson(jsonString);
+                        if (parsed == null) {
+                            log.error("Parsed JSONL String result is null: {}", jsonString);
+                            return null;
+                        }
+
+                        List<? extends IApiResult> apiResultList = batchResultJsonParse.parseResultStringToApiResultList(parsed.getT2(), API_RESULT_PARSE_CLASS);
+                        if (apiResultList == null) {
+                            log.error("Parsed Result List is null for heroId {}: {}", parsed.getT1(), parsed.getT2());
+                            return null;
+                        }
+
+                        return Tuples.of(parsed.getT1(), apiResultList);
+                    } catch (Exception e) {
+                        log.error("Failed to parse JSONL string: {}", jsonString, e);
+                        return null;
+                    }
+                })
+                .collectMap(Tuple2::getT1, Tuple2::getT2);
+    }
 
 }
