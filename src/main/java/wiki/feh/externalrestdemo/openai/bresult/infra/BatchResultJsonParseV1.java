@@ -1,6 +1,5 @@
 package wiki.feh.externalrestdemo.openai.bresult.infra;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -30,8 +29,8 @@ public class BatchResultJsonParseV1 implements IBatchResultJsonParse {
 
             List<T> apiResultList = objectMapper.readValue(
                     resultString,
-                    new TypeReference<>() {
-                    });
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, resultType)
+            );
 
             if (apiResultList == null || apiResultList.isEmpty()) {
                 log.error("Parsed ApiResult list is null or empty: {}", resultString);

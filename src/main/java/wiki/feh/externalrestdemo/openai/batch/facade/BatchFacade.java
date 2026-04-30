@@ -10,12 +10,13 @@ import reactor.core.scheduler.Schedulers;
 import wiki.feh.externalrestdemo.hero.domain.Hero;
 import wiki.feh.externalrestdemo.hero.service.HeroService;
 import wiki.feh.externalrestdemo.heroquote.agg.HeroQuoteAgg;
-import wiki.feh.externalrestdemo.heroquote.dto.HeroQuoteDtoConverterV1;
+import wiki.feh.externalrestdemo.heroquote.dto.IHeroQuoteDtoConverter;
 import wiki.feh.externalrestdemo.heroquote.service.HeroQuoteService;
 import wiki.feh.externalrestdemo.openai.batch.agg.QuoteInfoAgg;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchInfo;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchQuoteInfo;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchStatus;
+import wiki.feh.externalrestdemo.openai.batch.dto.IBatchDtoConverter;
 import wiki.feh.externalrestdemo.openai.batch.infra.IBatchService;
 import wiki.feh.externalrestdemo.openai.batch.infra.QuoteInfoAggService;
 import wiki.feh.externalrestdemo.openai.batch.service.BatchInfoService;
@@ -35,8 +36,11 @@ public class BatchFacade {
     @Qualifier("OpenAIBatchService")
     private final IBatchService openAIBatchService;
 
+    @Qualifier("OpenAIBatchDtoConverter")
+    private final IBatchDtoConverter batchDtoConverter;
+
     @Qualifier("HeroQuoteDtoConverterV1")
-    private final HeroQuoteDtoConverterV1 heroQuoteDtoConverterV1;
+    private final IHeroQuoteDtoConverter heroQuoteDtoConverter;
 
     public Mono<BatchInfo> asyncTest() {
         BatchInfo batchInfo = new BatchInfo().updateStatus(BatchStatus.PENDING);
@@ -107,8 +111,12 @@ public class BatchFacade {
                 // json String 리스트로 모아서 외부 API 요청
                 .flatMap(quoteInfoAggs -> {
                     // quoteInfoAggs 리스트를 json body string 리스트로 변환
+                    // 그리고 IBatchDTO로 감싸서 또 json으로 직렬화해야함
                     List<String> batchRequestLineJsonList = quoteInfoAggs.stream()
-                            .map(heroQuoteDtoConverterV1::toJsonString)
+                            .map(quoteInfoAgg -> {
+                                String quoteInfoAggJsonString = heroQuoteDtoConverter.toJsonString(quoteInfoAgg);
+                                return batchDtoConverter.toJsonString(quoteInfoAgg, quoteInfoAggJsonString);
+                            })
                             .toList();
                     return openAIBatchService.callRequestBatchApi(batchRequestLineJsonList);
                 })

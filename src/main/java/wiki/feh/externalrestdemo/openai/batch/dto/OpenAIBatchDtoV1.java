@@ -3,7 +3,6 @@ package wiki.feh.externalrestdemo.openai.batch.dto;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import wiki.feh.externalrestdemo.openai.batch.domain.BatchInfo;
 import wiki.feh.externalrestdemo.util.json.JsonWriter;
 
 /**
@@ -11,14 +10,14 @@ import wiki.feh.externalrestdemo.util.json.JsonWriter;
  */
 
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
-public class BatchDto {
+public class OpenAIBatchDtoV1 {
 
     /**
      * @see <a href="https://platform.openai.com/docs/api-reference/batch/request-input">Batch Request Input Object</a>
      */
     @Getter
     @AllArgsConstructor
-    public static class BatchRequestLine {
+    public static class BatchRequestLine{
         private String custom_id;
         private String method;
         private String url;
@@ -58,7 +57,7 @@ public class BatchDto {
             );
         }
 
-        public String getJsonString() {
+        public String toJsonString() {
             return JsonWriter.of(this).toString();
         }
 
