@@ -1,15 +1,16 @@
 package wiki.feh.externalrestdemo.openai.batch.service;
 
-import lombok.AllArgsConstructor;
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import lombok.AllArgsConstructor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchQuoteInfo;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchQuoteInfoRepository;
 import wiki.feh.externalrestdemo.openai.batch.domain.BatchStatus;
-
-import java.util.List;
 
 @AllArgsConstructor
 @Service
@@ -43,9 +44,25 @@ public class BatchQuoteInfoService {
         return batchQuoteInfoRepository.save(batchQuoteInfo);
     }
 
+    /**
+     * batchInfoId에 해당하는 BatchQuoteInfo 중에서 status가 PENDING인 것들을 모두 FAILED로 업데이트
+     * @param batchInfoId
+     * @return
+     */
     @Transactional
-    public Mono<Void> updateBatchQuoteInfoListStatusToFailed(int batchInfoId) {
+    public Mono<Void> updateBatchQuoteInfoListStatusPendingToFailed(int batchInfoId) {
         return batchQuoteInfoRepository.updateStatusToFailedByBatchInfoIdAndStatus(batchInfoId, BatchStatus.PENDING.getKey())
+                .then();
+    }
+
+    /**
+     * batchInfoId에 해당하는 BatchQuoteInfo 중에서 status가 REQUESTED인 것들을 모두 FAILED로 업데이트
+     * @param batchInfoId
+     * @return
+     */
+    @Transactional
+    public Mono<Void> updateBatchQuoteInfoListStatusRequestedToFailed(int batchInfoId) {
+        return batchQuoteInfoRepository.updateStatusToFailedByBatchInfoIdAndStatus(batchInfoId, BatchStatus.REQUESTED.getKey())
                 .then();
     }
 }

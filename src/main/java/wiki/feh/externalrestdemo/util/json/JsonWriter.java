@@ -3,6 +3,7 @@ package wiki.feh.externalrestdemo.util.json;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import wiki.feh.externalrestdemo.util.json.exception.JsonSerializeFailedException;
 
 @Getter
 @AllArgsConstructor
@@ -14,7 +15,7 @@ public class JsonWriter {
         try {
             return new JsonWriter(objectMapper.writeValueAsString(target));
         } catch (Exception e) {
-            throw new RuntimeException("Failed to convert text to JSON string", e);
+            throw new JsonSerializeFailedException("Failed to convert text to JSON string", e);
         }
     }
 
