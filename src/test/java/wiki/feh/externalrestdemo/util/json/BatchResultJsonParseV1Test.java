@@ -1,15 +1,17 @@
 package wiki.feh.externalrestdemo.util.json;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.context.ActiveProfiles;
+
 import wiki.feh.externalrestdemo.openai.bresult.dto.ApiResultV1;
 import wiki.feh.externalrestdemo.openai.bresult.infra.BatchResultJsonParseV1;
-
-import static org.junit.jupiter.api.Assertions.*;
+import wiki.feh.externalrestdemo.openai.bresult.infra.exception.BatchResultJsonSerializeFailedException;
 
 @ActiveProfiles("test")
 @ExtendWith(MockitoExtension.class)
@@ -17,7 +19,7 @@ class BatchResultJsonParseV1Test {
     @InjectMocks
     private BatchResultJsonParseV1 batchResultJsonParseV1;
 
-    @DisplayName("parseResultStringToApiResultList - 빈 리스트 반환 시 null 반환")
+    @DisplayName("parseResultStringToApiResultList - 빈 리스트 반환 시 empty list 반환")
     @Test
     void parseResultStringToApiResultList_EmptyList() {
         // given
@@ -27,23 +29,22 @@ class BatchResultJsonParseV1Test {
         var result = batchResultJsonParseV1.parseResultStringToApiResultList(emptyListJson, ApiResultV1.class);
 
         // then
-        assertNull(result);
+        assertEquals(0, result.size());
     }
 
-    @DisplayName("parseResultStringToApiResultList - invalid JSON 시 null 반환")
+    @DisplayName("parseResultStringToApiResultList - invalid JSON 시 BatchResultJsonSerializeFailedException 발생")
     @Test
     void parseResultStringToApiResultList_InvalidJson() {
         // given
         String invalidJson = "{ this is not valid JSON }";
 
-        // when
-        var result = batchResultJsonParseV1.parseResultStringToApiResultList(invalidJson, ApiResultV1.class);
-
-        // then
-        assertNull(result);
+        // when, then
+        assertThrows(BatchResultJsonSerializeFailedException.class, () -> {
+            batchResultJsonParseV1.parseResultStringToApiResultList(invalidJson, ApiResultV1.class);
+        });
     }
 
-    @DisplayName("parseResultStringToApiResultList - ApiResult 파싱 불가능 시 null 반환")
+    @DisplayName("parseResultStringToApiResultList - ApiResult 파싱 불가능 시 BatchResultJsonSerializeFailedException 발생")
     @Test
     void parseResultStringToApiResultList_InvalidApiResult() {
         // given
@@ -57,21 +58,20 @@ class BatchResultJsonParseV1Test {
                 ]
                 """;
 
-        // when
-        var result = batchResultJsonParseV1.parseResultStringToApiResultList(invalidApiResultJson, ApiResultV1.class);
-
-        // then
-        assertNull(result);
+        // when, then
+        assertThrows(BatchResultJsonSerializeFailedException.class, () -> {
+            batchResultJsonParseV1.parseResultStringToApiResultList(invalidApiResultJson, ApiResultV1.class);
+        });
     }
 
-    @DisplayName("parseResultStringToApiResultList - null 입력 시 null 반환")
+    @DisplayName("parseResultStringToApiResultList - null 입력 시 empty list 반환")
     @Test
     void parseResultStringToApiResultList_NullInput() {
         // when
         var result = batchResultJsonParseV1.parseResultStringToApiResultList(null, ApiResultV1.class);
 
         // then
-        assertNull(result);
+        assertEquals(0, result.size());
     }
 
     @DisplayName("parseResultStringToApiResultList - 정상 JSON 파싱 성공")

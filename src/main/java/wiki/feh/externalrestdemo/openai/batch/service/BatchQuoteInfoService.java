@@ -56,13 +56,13 @@ public class BatchQuoteInfoService {
     }
 
     /**
-     * batchInfoId에 해당하는 BatchQuoteInfo 중에서 status가 REQUESTED인 것들을 모두 FAILED로 업데이트
+     * batchInfoId에 해당하는 BatchQuoteInfo 중에서 status가 PENDING인 것들을 모두 FAILED로 업데이트
      * @param batchInfoId
      * @return
      */
     @Transactional
     public Mono<Void> updateBatchQuoteInfoListStatusRequestedToFailed(int batchInfoId) {
-        return batchQuoteInfoRepository.updateStatusToFailedByBatchInfoIdAndStatus(batchInfoId, BatchStatus.REQUESTED.getKey())
+        return batchQuoteInfoRepository.updateStatusToFailedByBatchInfoIdAndStatus(batchInfoId, BatchStatus.PENDING.getKey())
                 .then();
     }
 }
