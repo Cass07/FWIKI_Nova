@@ -10,3 +10,8 @@
 
 
 #### ReactiveCrudRepo? R2dbcRepo?
+
+
+#### 주의사항
+* 커스텀 메소드를 생성할 때 구현 객체명을  \[Entity명\]RepositoryImpl 로 맞춰줘야 하는듯
+  * 생각해보니까 당연하다, jdbc나 r2dbc는 모두 Spring Data의 구현체니까!!

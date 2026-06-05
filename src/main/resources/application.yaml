@@ -9,6 +9,11 @@ cloud:
       access-key: ${AWS_ACCESS_KEY}
       secret-key: ${AWS_SECRET_KEY}
 
+discord:
+  channel-url: ${DISCORD_CHANNEL_URL}
+  username: ${DISCORD_USERNAME}
+  avatar-url: ${DISCORD_AVATAR_URL}
+
 spring:
   r2dbc:
     url: ${datasource-url}

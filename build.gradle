@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.5.0'
     id 'io.spring.dependency-management' version '1.1.7'
+    id 'jacoco'
 }
 
 group = 'wiki.feh'
@@ -55,7 +56,7 @@ dependencies {
 //    implementation 'org.testcontainers:r2dbc'
 
     // sqs
-    implementation platform("io.awspring.cloud:spring-cloud-aws-dependencies:3.0.1")
+    implementation platform("io.awspring.cloud:spring-cloud-aws-dependencies:3.4.2")
     implementation 'io.awspring.cloud:spring-cloud-aws-starter-sqs'
 
     testRuntimeOnly 'com.h2database:h2'
@@ -64,4 +65,71 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    finalizedBy jacocoTestReport
+}
+
+jacoco {
+    toolVersion = "0.8.14"
+}
+
+jacocoTestReport {
+    // test task가 끝난 후 실행
+    dependsOn test
+
+    reports {
+        // 커버리지 테스트 결과를 xml, html 파일로 생성
+        xml.required.set(true)
+        html.required.set(true)
+
+        // xml, html 파일 생성 위치
+        xml.destination file(layout.buildDirectory.dir("jacoco/jacocoTestReport.xml"))
+        html.destination file(layout.buildDirectory.dir("jacoco/html"))
+    }
+
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: [
+                    '**/dto/**',
+                    '**/exception/**'
+            ])
+        }))
+    }
+
+    finalizedBy 'jacocoTestCoverageVerification'
+}
+
+jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            // 커버리지 체크 기준을 class로 설정
+            element = 'CLASS'
+
+            // Branch 커버리지가 80% 미만일 경우 실패
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.0
+            }
+
+            // Line 커버리지가 80% 미만일 경우 실패
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.0
+            }
+
+            // DTO 클래스는 커버리지 체크에서 제외
+            excludes = [
+                    '**.dto.**',
+                    '**.exception.**',
+                    '**.exception1.**',
+                    '**.EncryptUtils',
+                    '**.SessionManageUtils',
+                    '**.converter.**',
+                    "**.image.**",
+                    "**.NamedLock**",
+
+            ]
+        }
+    }
 }

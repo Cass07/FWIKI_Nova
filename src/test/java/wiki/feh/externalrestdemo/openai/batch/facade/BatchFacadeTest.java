@@ -1,35 +1,42 @@
 package wiki.feh.externalrestdemo.openai.batch.facade;
 
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.*;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.context.ActiveProfiles;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
-import reactor.util.function.Tuples;
-import wiki.feh.externalrestdemo.hero.domain.Hero;
-import wiki.feh.externalrestdemo.hero.service.HeroService;
-import wiki.feh.externalrestdemo.heroquote.domain.HeroQuote;
-import wiki.feh.externalrestdemo.heroquote.domain.QuoteLang;
-import wiki.feh.externalrestdemo.heroquote.service.HeroQuoteService;
-import wiki.feh.externalrestdemo.openai.batch.domain.BatchInfo;
-import wiki.feh.externalrestdemo.openai.batch.domain.BatchQuoteInfo;
-import wiki.feh.externalrestdemo.openai.batch.domain.BatchStatus;
-import wiki.feh.externalrestdemo.openai.batch.infra.IBatchService;
-import wiki.feh.externalrestdemo.openai.batch.service.BatchInfoService;
-import wiki.feh.externalrestdemo.openai.batch.service.BatchQuoteInfoService;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.verify;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Spy;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.context.ActiveProfiles;
+
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
+import wiki.feh.externalrestdemo.hero.domain.Hero;
+import wiki.feh.externalrestdemo.hero.service.HeroService;
+import wiki.feh.externalrestdemo.heroquote.agg.HeroQuoteAgg;
+import wiki.feh.externalrestdemo.heroquote.domain.HeroQuote;
+import wiki.feh.externalrestdemo.heroquote.domain.QuoteLang;
+import wiki.feh.externalrestdemo.heroquote.dto.IHeroQuoteDtoConverter;
+import wiki.feh.externalrestdemo.heroquote.service.HeroQuoteService;
+import wiki.feh.externalrestdemo.openai.batch.agg.QuoteInfoAgg;
+import wiki.feh.externalrestdemo.openai.batch.domain.BatchInfo;
+import wiki.feh.externalrestdemo.openai.batch.domain.BatchStatus;
+import wiki.feh.externalrestdemo.openai.batch.dto.IBatchDtoConverter;
+import wiki.feh.externalrestdemo.openai.batch.infra.IBatchService;
+import wiki.feh.externalrestdemo.openai.batch.infra.QuoteInfoAggService;
+import wiki.feh.externalrestdemo.openai.batch.service.BatchInfoService;
+import wiki.feh.externalrestdemo.openai.batch.service.BatchQuoteInfoService;
 
 @ActiveProfiles("test")
 @ExtendWith(MockitoExtension.class)
@@ -45,23 +52,32 @@ class BatchFacadeTest {
     private BatchQuoteInfoService batchQuoteInfoService;
 
     @Mock
+    private QuoteInfoAggService quoteInfoAggService;
+
+    @Mock
     private HeroQuoteService heroQuoteService;
 
     @Mock
     private HeroService heroService;
 
     @Mock
-    private IBatchService openAPIService;
+    private IBatchService openAPIBatchService;
+
+    @Mock
+    private IBatchDtoConverter batchDtoConverter;
+
+    @Mock
+    private IHeroQuoteDtoConverter heroQuoteDtoConverter;
 
     @Captor
-    private ArgumentCaptor<List<BatchQuoteInfo>> batchQuoteInfoListCaptor;
+    private ArgumentCaptor<List<QuoteInfoAgg>> batchQuoteInfoListCaptor;
 
     @Captor
     private ArgumentCaptor<List<String>> stringListCaptor;
 
     @DisplayName("asyncTest 테스트")
     @Test
-    public void testAsyncTest() {
+    void testAsyncTest() {
         // given
         BatchInfo batchInfo = new BatchInfo(1, null, BatchStatus.PENDING, LocalDateTime.now(), null);
         doReturn(Mono.just(batchInfo))
@@ -78,7 +94,7 @@ class BatchFacadeTest {
 
     @DisplayName("asyncTestInner 테스트")
     @Test
-    public void testAsyncTestInner() {
+    void testAsyncTestInner() {
         // given
         BatchInfo batchInfo = new BatchInfo(1, null, BatchStatus.PENDING, LocalDateTime.now(), null);
         Mono<BatchInfo> savedBatchInfoMono = Mono.just(batchInfo);
@@ -99,7 +115,7 @@ class BatchFacadeTest {
 
     @DisplayName("asyncTestInner 테스트 - emit 순서가 보장되지 않을 떄")
     @Test
-    public void testAsyncTestInner_Unordered() {
+    void testAsyncTestInner_Unordered() {
         // given
         BatchInfo batchInfo = new BatchInfo(1, null, BatchStatus.PENDING, LocalDateTime.now(), null);
         Mono<BatchInfo> savedBatchInfoMono = Mono.just(batchInfo);
@@ -124,7 +140,7 @@ class BatchFacadeTest {
 
     @DisplayName("requestBatchJob 테스트")
     @Test
-    public void testRequestBatchJob() {
+    void testRequestBatchJob() {
         // given
         BatchInfo batchInfo = new BatchInfo(1, null, BatchStatus.PENDING, LocalDateTime.now(), null);
 
@@ -145,73 +161,64 @@ class BatchFacadeTest {
 
     @DisplayName("HeroQuoteBatchJob 테스트")
     @Test
-    public void testRequestHeroQuoteBatchJob_endToEnd_captor() {
+    void testRequestHeroQuoteBatchJob_endToEnd_captor() {
         // given
         String hero1 = "hero1";
         String hero2 = "hero2";
         List<String> heroIds = List.of(hero1, hero2);
-        Hero hero1Hero = new Hero(hero1, "Hero1Kor", "HeroOneKorSub", "Hero1Jp", "HeroOneJpSub","Hero1", LocalDate.now());
-        Hero hero2Hero = new Hero(hero2, "Hero2Kor", "HeroTwoKorSub", "Hero2Jp", "HeroTwoJpSub","Hero2", LocalDate.now());
-        LocalDateTime now = LocalDateTime.now();
 
-        List<Hero> heroList = List.of(hero1Hero, hero2Hero);
+        Hero hero1Hero = new Hero(hero1, "Hero1Kor", "HeroOneKorSub", "Hero1Jp", "HeroOneJpSub", "Hero1", LocalDate.now());
+        Hero hero2Hero = new Hero(hero2, "Hero2Kor", "HeroTwoKorSub", "Hero2Jp", "HeroTwoJpSub", "Hero2", LocalDate.now());
 
-        HeroQuote heroQuote1_1 = new HeroQuote(1, hero1, "Kind", 1, "quote1", QuoteLang.JP);
-        HeroQuote heroQuote1_2 = new HeroQuote(2, hero1, "Brave", 1, "quote2", QuoteLang.JP);
-        HeroQuote heroQuote2_1 = new HeroQuote(3, hero2, "Kind", 1, "quote3", QuoteLang.JP);
-        HeroQuote heroQuote2_2 = new HeroQuote(4, hero2, "Brave", 1, "quote4", QuoteLang.JP);
+        HeroQuote q11 = new HeroQuote(1, hero1, "Kind", 1, "quote1", QuoteLang.JP);
+        HeroQuote q12 = new HeroQuote(2, hero1, "Brave", 1, "quote2", QuoteLang.JP);
+        HeroQuote q21 = new HeroQuote(3, hero2, "Kind", 1, "quote3", QuoteLang.JP);
+        HeroQuote q22 = new HeroQuote(4, hero2, "Brave", 1, "quote4", QuoteLang.JP);
 
-        BatchInfo batchInfo = new BatchInfo(1, null, BatchStatus.PENDING, now, null);
-
-        doReturn(Flux.fromIterable(heroList))
-                .when(heroService).getHeroesByIds(heroIds);
-
-        doReturn(Flux.just(
-                Tuples.of(hero1, List.of(heroQuote1_1, heroQuote1_2)),
-                Tuples.of(hero2, List.of(heroQuote2_1, heroQuote2_2))
-        )).when(heroQuoteService).getQuotesAndIdByIds(heroIds);
-
-        doReturn(Mono.empty())
-                .when(batchQuoteInfoService).saveAllBatchQuoteInfoList(anyList());
-
-
+        BatchInfo seed = new BatchInfo(1, null, BatchStatus.PENDING, LocalDateTime.now(), null);
         String batchApiResponseId = "external-batch-id-123";
 
-        doReturn(Mono.just(batchApiResponseId))
-                .when(openAPIService).callRequestBatchApi(any());
+        doReturn(Flux.just(hero1Hero, hero2Hero)).when(heroService).getHeroesByIds(heroIds);
+        doReturn(Flux.just(
+            new HeroQuoteAgg(hero1, List.of(q11, q12)),
+            new HeroQuoteAgg(hero2, List.of(q21, q22))
+        )).when(heroQuoteService).getHeroQuoteAggByIds(heroIds);
 
-        doReturn(Mono.just(batchInfo.updateBatchId("external-batch-id-123").updateStatus(BatchStatus.REQUESTED)))
-                .when(batchInfoService).updateBatchInfoRequested(any(BatchInfo.class), eq(batchApiResponseId));
+        doReturn(Mono.empty()).when(quoteInfoAggService).saveAllBatchQuoteInfoList(anyList());
+        doReturn("{\"quote\":\"json\"}").when(heroQuoteDtoConverter).toJsonString(any());
+        doReturn("{\"wrapped\":true}").when(batchDtoConverter).toJsonString(any(), anyString());
+        doReturn(Mono.just(batchApiResponseId)).when(openAPIBatchService).callRequestBatchApi(anyList());
 
-        // when, then
-        StepVerifier.create(batchFacade.requestHeroQuoteBatchJob(heroIds, batchInfo))
-                .expectSubscription()
-                .expectNextMatches(bi -> bi.getIdx() == batchInfo.getIdx() && bi.getStatus() == BatchStatus.REQUESTED && batchApiResponseId.equals(bi.getBatchId()))
-                .verifyComplete();
+        // 새 객체를 만들어 반환해서 상태 오염 방지
+        doAnswer(inv -> {
+            BatchInfo in = inv.getArgument(0);
+            String bid = inv.getArgument(1);
+            return Mono.just(new BatchInfo(in.getIdx(), bid, BatchStatus.REQUESTED, in.getCreatedAt(), in.getUpdatedAt()));
+        }).when(batchInfoService).updateBatchInfoRequested(any(BatchInfo.class), eq(batchApiResponseId));
 
-        // then - batchQuoteInfo list 저장 검증
+        // when / then
+        StepVerifier.create(batchFacade.requestHeroQuoteBatchJob(heroIds, seed))
+            .assertNext(bi -> {
+                // 실패 시 어떤 필드가 다른지 바로 보이게 메시지 포함
+                assertEquals(seed.getIdx(), bi.getIdx(), "idx mismatch");
+                assertEquals(BatchStatus.REQUESTED, bi.getStatus(), "status mismatch");
+                assertEquals(batchApiResponseId, bi.getBatchId(), "batchId mismatch");
+            })
+            .verifyComplete();
 
-        verify(batchQuoteInfoService).saveAllBatchQuoteInfoList(batchQuoteInfoListCaptor.capture());
-        List<BatchQuoteInfo> captured = batchQuoteInfoListCaptor.getValue();
-        assertNotNull(captured);
-        assertEquals(2, captured.size()); // heroIds 수와 같아야 함
-        assertTrue(captured.stream().anyMatch(bqi -> bqi.getHeroId().equals(hero1)));
-        assertTrue(captured.stream().anyMatch(bqi -> bqi.getHeroId().equals(hero2)));
+        // 추가적으로 저장된 BatchQuoteInfo 리스트의 heroId가 올바른지 검증
+        verify(quoteInfoAggService).saveAllBatchQuoteInfoList(batchQuoteInfoListCaptor
+            .capture());
+        List<QuoteInfoAgg> capturedAggs = batchQuoteInfoListCaptor.getValue();
+        assertNotNull(capturedAggs, "Captured QuoteInfoAgg list is null");
+        assertEquals(2, capturedAggs.size(), "Captured QuoteInfoAgg list size mismatch");
+        assertTrue(capturedAggs.stream().anyMatch(agg -> agg.getHero().getId().equals(hero1)), "Hero1 not found in captured QuoteInfoAgg list");
+        assertTrue(capturedAggs.stream().anyMatch(agg -> agg.getHero().getId().equals(hero2)), "Hero2 not found in captured QuoteInfoAgg list");
 
-        // callRequestBatchApi에 전달된 리스트 검증
-        verify(openAPIService).callRequestBatchApi(stringListCaptor.capture());
-        List<String> capturedApiRequestList = stringListCaptor.getValue();
-        assertNotNull(capturedApiRequestList);
-        assertEquals(2, capturedApiRequestList.size());
-
-        String firstItem = capturedApiRequestList.getFirst();
-        assertTrue(firstItem.contains(heroQuote1_1.getText()));
-        assertTrue(firstItem.contains(heroQuote1_2.getText()));
-
-        String secondItem = capturedApiRequestList.getLast();
-        assertTrue(secondItem.contains(heroQuote2_1.getText()));
-        assertTrue(secondItem.contains(heroQuote2_2.getText()));
+        // 추가적으로 callRequestBatchApi에 전달된 JSON 리스트의 내용이 올바른지 검증
+        verify(openAPIBatchService).callRequestBatchApi(stringListCaptor.capture());
+        List<String> capturedJsonList = stringListCaptor.getValue();
+        assertNotNull(capturedJsonList, "Captured JSON list is null");
+        assertEquals(2, capturedJsonList.size(), "Captured JSON list size mismatch");
     }
-
-
 }

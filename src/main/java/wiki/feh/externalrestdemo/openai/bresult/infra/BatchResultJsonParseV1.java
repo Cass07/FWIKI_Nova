@@ -1,16 +1,20 @@
 package wiki.feh.externalrestdemo.openai.bresult.infra;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.Collections;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 import wiki.feh.externalrestdemo.openai.bresult.dto.IApiResult;
-
-import java.util.List;
+import wiki.feh.externalrestdemo.openai.bresult.infra.exception.BatchResultJsonSerializeFailedException;
 
 @Component
 @Slf4j
@@ -24,7 +28,7 @@ public class BatchResultJsonParseV1 implements IBatchResultJsonParse {
         try {
             if(resultString == null || resultString.isEmpty()) {
                 log.error("Result string is null or empty");
-                return null;
+                return Collections.emptyList();
             }
 
             List<T> apiResultList = objectMapper.readValue(
@@ -34,15 +38,14 @@ public class BatchResultJsonParseV1 implements IBatchResultJsonParse {
 
             if (apiResultList == null || apiResultList.isEmpty()) {
                 log.error("Parsed ApiResult list is null or empty: {}", resultString);
-                return null;
+                return Collections.emptyList();
             }
 
             return apiResultList;
         } catch (Exception e) {
             log.error("Failed to parse result string to ApiResult list: {}", resultString, e);
+            throw new BatchResultJsonSerializeFailedException("Failed to parse result string to ApiResult list: " + e.getMessage(), e);
         }
-
-        return null;
     }
 
     @Override

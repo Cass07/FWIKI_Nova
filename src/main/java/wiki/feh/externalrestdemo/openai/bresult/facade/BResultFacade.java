@@ -1,9 +1,13 @@
 package wiki.feh.externalrestdemo.openai.bresult.facade;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.function.TupleUtils;
@@ -22,9 +26,6 @@ import wiki.feh.externalrestdemo.openai.bresult.infra.IBatchResultJsonParse;
 import wiki.feh.externalrestdemo.openai.bresult.infra.IBatchResultService;
 import wiki.feh.externalrestdemo.util.NamedLockManager;
 
-import java.util.List;
-import java.util.Map;
-
 /**
  * 데이터를 받아서 가공해서 DB에 저장하는 역할
  */
@@ -32,8 +33,8 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 public class BResultFacade {
-    private final String HERO_QUOTE_KR_LOCK_PREFIX = "hquote_";
-    private final Class <? extends IApiResult> API_RESULT_PARSE_CLASS = ApiResultV1.class;
+    private static final String HERO_QUOTE_KR_LOCK_PREFIX = "hquote_";
+    private static final Class <? extends IApiResult> API_RESULT_PARSE_CLASS = ApiResultV1.class;
 
     private final BatchQuoteInfoService batchQuoteInfoService;
     private final BatchInfoService batchInfoService;
@@ -56,16 +57,33 @@ public class BResultFacade {
                     // batchId로 결과 파일 ID 조회
                     String bId = batchInfo.getBatchId();
                     return batchResultService.getJsonListFromBatchId(bId)
-                            // 검증된 batchInfo와 jsonList를 parsing
-                            // parsing은 기존에 정의한 jsonl 구조에 따라 가기 때문에 API와는 독립적으로 설계
-                            .flatMap(jsonList ->
-                                    this.makeApiResultMapFromBatchInfoAndJsonList(batchInfo, jsonList)
-                            )
-                            // parsing된 데이터를 바탕으로 실제 작업 수행
-                            .flatMap(TupleUtils.function((batchInfo_, apiResultMap) -> {
-                                log.info("batchInfo status: {}", batchInfo_.getStatus());
-                                return this.insertApiResultToHeroQuoteKr(batchInfo_, apiResultMap);
-                            }));
+                        // 검증된 batchInfo와 jsonList를 parsing
+                        // parsing은 기존에 정의한 jsonl 구조에 따라 가기 때문에 API와는 독립적으로 설계
+                        .flatMap(jsonList ->
+                                this.makeApiResultMapFromBatchInfoAndJsonList(batchInfo, jsonList)
+                        )
+                        // parsing된 데이터를 바탕으로 실제 작업 수행
+                        .flatMap(TupleUtils.function((batchInfo1, apiResultMap) -> {
+                            log.info("batchInfo status: {}", batchInfo1.getStatus());
+                            return this.insertApiResultToHeroQuoteKr(batchInfo1, apiResultMap);
+                        }))
+                        // 작업이 완료된 후 requested 상태로 남아 있는 batchQuoteInfo가 있으면 failed로 업데이트
+                        .flatMap(batchInfo1 -> {
+                            log.info("Batch processing completed for batchId: {}. Checking for any pending BatchQuoteInfo to mark as failed.", batchInfo1.getBatchId());
+                            return batchQuoteInfoService.updateBatchQuoteInfoListStatusRequestedToFailed(batchInfo1.getIdx())
+                                    .thenReturn(batchInfo1);
+                        });
+                });
+    }
+
+    public Mono<BatchInfo> updateBatchAsFailed(String batchId) {
+        return batchInfoService.getBatchInfoByBatchId(batchId)
+                .flatMap(batchInfo -> {
+                    if (batchInfo.getStatus() == BatchStatus.COMPLETED) {
+                        log.warn("BatchInfo id {} is already completed. Cannot mark as failed.", batchInfo.getIdx());
+                        return Mono.empty();
+                    }
+                    return batchInfoService.updateBatchInfoFailed(batchInfo);
                 });
     }
 
@@ -126,7 +144,7 @@ public class BResultFacade {
                                 .then(Mono.defer(() -> {
                                     // bi 이하의 batchQuoteInfo 중 Pending인 것을 FAILED로 변경
                                     log.info("All BatchQuoteInfo processing completed for BatchInfo id {}", bi.getIdx());
-                                    return batchQuoteInfoService.updateBatchQuoteInfoListStatusToFailed(bi.getIdx());
+                                    return batchQuoteInfoService.updateBatchQuoteInfoListStatusPendingToFailed(bi.getIdx());
                                 }))  // 모든 작업 완료 대기
                 )
                 .flatMap(batchInfoService::updateBatchInfoCompleted);
@@ -220,7 +238,7 @@ public class BResultFacade {
                         }
 
                         List<? extends IApiResult> apiResultList = batchResultJsonParse.parseResultStringToApiResultList(parsed.getT2(), API_RESULT_PARSE_CLASS);
-                        if (apiResultList == null) {
+                        if (apiResultList.isEmpty()) {
                             log.error("Parsed Result List is null for heroId {}: {}", parsed.getT1(), parsed.getT2());
                             return null;
                         }

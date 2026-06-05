@@ -1,18 +1,21 @@
 package wiki.feh.externalrestdemo.openai.bresult.infra;
 
+import java.io.InputStream;
+
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
+
 import com.openai.client.OpenAIClientAsync;
 import com.openai.client.okhttp.OpenAIOkHttpClientAsync;
 import com.openai.core.http.HttpResponse;
 import com.openai.models.batches.Batch;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-
-import java.io.InputStream;
+import wiki.feh.externalrestdemo.openai.bresult.infra.exception.BatchResultFileNotExistException;
 
 @Slf4j
 @Component
@@ -50,11 +53,8 @@ public class OpenAIBatchResultService implements IBatchResultService {
                         byte[] bytes = inputStream.readAllBytes();
                         return Mono.just(new String(bytes));
                     } catch (Exception e) {
-                        return Mono.error(new RuntimeException("Error reading file content: " + e.getMessage()));
+                        return Mono.error(new BatchResultFileNotExistException("Error reading file content: " + e.getMessage()));
                     }
-                }).onErrorResume(error -> {
-                    log.error("Error fetching file content", error);
-                    return Mono.just("Error fetching file content: " + error.getMessage());
                 });
     }
 
@@ -63,7 +63,7 @@ public class OpenAIBatchResultService implements IBatchResultService {
     @Override
     public Mono<java.util.List<String>> getJsonListFromBatchId(String batchId) {
         return this.getBatchResultFileId(batchId)
-                .switchIfEmpty(Mono.error(new RuntimeException("No result file found for batchId: " + batchId)))
+                .switchIfEmpty(Mono.error(new RuntimeException("No result file ID found for batchId: " + batchId)))
                 // 결과 파일 ID로 파일 내용 조회
                 .flatMap(fileId -> {
                     log.info("Retrieved output file ID: {}", fileId);

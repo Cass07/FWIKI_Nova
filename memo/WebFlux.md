@@ -93,3 +93,12 @@
 - onErrorComplete : 에러 발생 시 주어진 predicate가 true라면 complete, 아니라면 error 전파
 - onErrorContinue : 에러 발생 시 주어진 predicate를 실행하고 계속해서 EMIT
 - onErrorStop : 에러 발생 시 스트림을 중단하고 에러를 전파 (스트림을 즉시 중단)
+
+### Operator
+
+#### flatMap과 flatMapMany의 차이
+1. flatMap with mono -> Mono<List<Object>를 반환
+2. flatMapMany -> Flux<Object>를 반환
+
+- flatMapMany는 mono에서 flux로 변환됨이 가정 될 때 사용하고
+- flatMap은 mono와 flux에서 모두 사용될 수 있으며 
